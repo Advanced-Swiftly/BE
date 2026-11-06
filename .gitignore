@@ -1,5 +1,5 @@
 HELP.md
-.gradle
+.gradle/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
@@ -39,12 +39,12 @@ out/
 ### Mac OS ###
 .DS_Store
 
-## application ###
-/src/main/resources/application.yaml
-/src/main/resources/application.properties
-
-#env
+# Local-only configuration and secrets
 .env
+.env.*
+!.env.example
+/src/main/resources/application-local-secrets.yml
+/src/main/resources/application-local-secrets.yaml
 
 .claude
 

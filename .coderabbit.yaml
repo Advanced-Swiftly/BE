@@ -1,0 +1,57 @@
+language: "ko-KR"
+tone_instructions: "기술 용어는 영어로 유지하고 나머지는 간결한 한국어로 설명합니다. 문제의 영향과 수정 근거를 함께 제시합니다."
+early_access: false
+enable_free_tier: true
+
+reviews:
+  profile: "assertive"
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  review_status: true
+  review_details: true
+  poem: false
+  auto_approvals:
+    enabled: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "develop"
+      - "main"
+  path_filters:
+    - "!build/**"
+    - "!**/*.jar"
+    - "!**/*.class"
+  path_instructions:
+    - path: "src/main/java/**"
+      instructions: |
+        - Spring Boot와 Java 21의 관례를 따르는지 확인합니다.
+        - 인증과 인가, 입력값 검증, Transaction 경계, 동시성 문제를 중점적으로 검토합니다.
+        - JPA Entity가 API Response로 직접 노출되거나 N+1 Query가 발생할 가능성을 확인합니다.
+        - Domain 계층이 Infrastructure 구현에 직접 의존하지 않는지 확인합니다.
+    - path: "src/main/java/**/config/**"
+      instructions: |
+        - Security 설정에서 공개 Endpoint 범위가 과도하지 않은지 확인합니다.
+        - Secret, CORS, Session, CSRF 설정이 Production 환경에 안전한지 확인합니다.
+    - path: "src/main/resources/db/migration/**"
+      instructions: |
+        - PostgreSQL과 Flyway 문법을 기준으로 검토합니다.
+        - 이미 배포된 Migration을 수정하지 않고 새 Version으로 변경했는지 확인합니다.
+        - Lock, 장시간 Transaction, 데이터 손실 가능성이 있는 DDL을 지적합니다.
+    - path: "src/test/**"
+      instructions: |
+        - 정상 흐름뿐 아니라 Validation, 인증, 권한, 실패 흐름과 경계값이 포함됐는지 확인합니다.
+        - Test가 실행 순서나 외부 서비스 상태에 의존하지 않는지 확인합니다.
+    - path: ".github/workflows/**"
+      instructions: |
+        - 최소 권한 원칙, Secret 노출, 임의 Code 실행, Supply Chain 위험을 검토합니다.
+        - CI 실패 시 CD가 실행되지 않는지 확인합니다.
+    - path: "Dockerfile"
+      instructions: |
+        - Non-root 실행, Image 크기, Build 재현성, Secret 포함 여부를 확인합니다.
+    - path: "render.yaml"
+      instructions: |
+        - Free Plan 제한과 Health Check, Environment Variable, 배포 Branch 설정을 확인합니다.
+
+chat:
+  auto_reply: true

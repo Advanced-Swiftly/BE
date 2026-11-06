@@ -1,47 +1,83 @@
-# 🗣️ Swiftly BE
-## 🚀 Git Flow
-- `main`
-    - 프로젝트 최종 merge
-    - 기본 프로젝트 세팅, 배포 가능한 브랜치, 항상 배포 가능한 상태를 유지
-- `develop`
-    - 프로젝트 완성 전까지 완성한 기능들을 계속해서 merge
-    - 배포 가능한 브랜치, 항상 배포 가능한 상태를 유지
-- `{type}/{issue number}`
-    - 개발 브랜치
-    - 예: `feat/#5`, `fix/#11`
+# PawFit Backend
 
-> 작업 단위로 이슈 생성 → 브랜치 생성 → 생성한 브랜치에서 작업 후 끝나면 dev 브랜치로 PR 남기기
->
-> 모든 작업 시작 전 생성한 브랜치에서 dev 브랜치 pull을 받은 후 작업
+반려견과 함께 갈 수 있는 장소를 찾고, 업체 정책과 반려견 정보를 비교해 입장 가능 여부를 판정하는 PawFit의 Spring Boot API입니다.
 
-<!-- <img width="838" height="718" alt="Image" src="https://github.com/user-attachments/assets/530e9719-468e-457a-981a-e5fa46af82ff" /> -->
+## 기술 스택
 
-&nbsp;
-## 💡 PR Rules
-- Assignee에는 본인을 지정해 주세요.
-- Reviewers에는 본인을 제외한 백엔드 팀원을 지정한 후, 카카오톡으로 공유해 주세요.
-- 이후, 팀원이 PR을 확인하고 승인해서 머지해 주세요.
-  (해당 브랜치는 머지 후 자동 삭제되며, 복구도 가능합니다.)
+- Java 21 / Spring Boot 4.1.2 / Gradle 9.8.2
+- Spring MVC, Security, Validation, JPA, Flyway
+- PostgreSQL (local Docker, production Supabase)
+- OpenAPI / Swagger UI
+- Actuator
+- Docker / Render
+- GitHub Actions / CodeRabbit
 
-&nbsp;
-## 💻 Commit Message Convention
-| **Type** | **Description** |
-| --- | --- |
-| **Feat** | 새로운 기능 추가 |
-| **Fix** | 버그 수정 |
-| **Docs** | 문서 수정 |
-| **Style** | 코드 formatting, 세미콜론 누락, 코드 자체의 변경이 없는 경우 |
-| **Refactor** | 코드 리팩토링 |
-| **Test** | 테스트 코드, 리팩토링 테스트 코드 추가 |
-| **Chore** | 패키지 매니저 수정, 그 외 기타 수정 (예: .gitignore) |
-| **Design** | CSS 등 사용자 UI 디자인 변경 |
-| **Comment** | 필요한 주석 추가 및 변경 |
-| **Rename** | 파일 또는 폴더 명을 수정하거나 옮기는 작업만인 경우 |
-| **Remove** | 파일을 삭제하는 작업만 수행한 경우 |
-| **Init** | 프로젝트 초기 세팅 |
-| **Merge** | 브랜치 merge |
-| **!BREAKING CHANGE** | 커다란 API 변경의 경우 |
-| **!HOTFIX** | 급하게 치명적인 버그를 고쳐야 하는 경우 |
-> Type: commit title
->
-> ex. `Feat: 로그인 기능 추가`
+## 빠른 시작
+
+요구 사항: JDK 21+, Docker
+
+```bash
+cp .env.example .env
+docker compose up -d postgres
+./gradlew bootRun
+```
+
+확인:
+
+- Health: http://localhost:8080/actuator/health
+- Swagger UI: http://localhost:8080/swagger-ui.html
+- OpenAPI JSON: http://localhost:8080/v3/api-docs
+
+테스트와 빌드:
+
+```bash
+./gradlew clean test bootJar
+docker build -t pawfit-api .
+```
+
+`.env`는 Docker Compose가 읽습니다. 애플리케이션 환경 변수를 현재 shell에도 적용하려면 별도로 export하거나 IDE Run Configuration에 등록합니다. 기본 local 설정은 별도 입력 없이 `localhost:5432/pawfit`에 연결됩니다.
+
+## 설정
+
+| 환경 변수 | 용도 | 필수 환경 |
+| --- | --- | --- |
+| `SPRING_PROFILES_ACTIVE` | `local`, `test`, `prod` | 배포 |
+| `DB_URL` | JDBC PostgreSQL URL | 배포 |
+| `DB_USERNAME` | DB 사용자 | 배포 |
+| `DB_PASSWORD` | DB 비밀번호 | 배포 |
+| `CORS_ALLOWED_ORIGINS` | 쉼표 구분 프론트엔드 origin | 배포 |
+| `JWT_SECRET` | JWT 서명 키(인증 구현 시 사용) | 배포 |
+| `SUPABASE_URL` | Supabase 프로젝트 URL | 파일 기능 |
+| `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 Storage 키 | 파일 기능 |
+| `SUPABASE_STORAGE_BUCKET` | Storage bucket 이름 | 파일 기능 |
+| `GEMINI_API_KEY` | OCR·챗봇 API 키 | AI 기능 |
+
+실제 비밀값은 Git이나 설정 파일에 커밋하지 않습니다.
+
+## 문서
+
+- [담당 API 9개 도메인·51개 목록](docs/API_SCOPE.md)
+- [아키텍처와 패키지 규칙](docs/ARCHITECTURE.md)
+- [권장 구현 순서](docs/IMPLEMENTATION_PLAN.md)
+- [Supabase·Render·GitHub Actions 배포](docs/DEPLOYMENT.md)
+- [Render·Supabase 배포 준비 단계](배포준비단계.md)
+- [Notion API 명세서](https://app.notion.com/p/40e938594612806594b7cf3ffb1f1cc8)
+
+## Code Review
+
+CodeRabbit Open Source 무료 Review를 사용합니다. GitHub App 권한은 `Advanced-Swiftly/BE` Repository에만 부여합니다. `develop`과 `main` 대상 PR은 자동 Review하며, 세부 기준은 [CodeRabbit 설정](.coderabbit.yaml)에 정의합니다. 자동 Approval은 사용하지 않으므로 최종 Merge 전에는 백엔드 팀원의 Review가 필요합니다.
+
+## 브랜치와 협업
+
+- `main`: 최종 배포 가능 버전
+- `develop`: 기능 통합 및 Render 배포 브랜치
+- `{type}/#{issue-number}`: 이슈 단위 작업 브랜치
+
+작업 흐름:
+
+1. GitHub Issue 생성
+2. 최신 `develop`에서 작업 브랜치 생성
+3. 테스트 통과 후 `develop` 대상 PR
+4. 다른 백엔드 팀원의 승인 후 merge
+
+PR에서는 CI의 `Test and build` 검사를 반드시 통과해야 합니다.
