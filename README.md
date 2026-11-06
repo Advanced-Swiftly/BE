@@ -10,7 +10,7 @@
 - OpenAPI / Swagger UI
 - Actuator
 - Docker / Render
-- GitHub Actions
+- GitHub Actions / CodeRabbit
 
 ## 빠른 시작
 
@@ -61,6 +61,10 @@ docker build -t pawfit-api .
 - [권장 구현 순서](docs/IMPLEMENTATION_PLAN.md)
 - [Supabase·Render·GitHub Actions 배포](docs/DEPLOYMENT.md)
 - [Notion API 명세서](https://app.notion.com/p/40e938594612806594b7cf3ffb1f1cc8)
+
+## Code Review
+
+CodeRabbit Open Source 무료 Review를 사용합니다. `develop`과 `main` 대상 PR은 자동 Review하며, 세부 기준은 [CodeRabbit 설정](.coderabbit.yaml)에 정의합니다. 자동 Approval은 사용하지 않으므로 최종 Merge 전에는 백엔드 팀원의 Review가 필요합니다.
 
 ## 브랜치와 협업
 
