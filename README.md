@@ -60,6 +60,7 @@ docker build -t pawfit-api .
 - [아키텍처와 패키지 규칙](docs/ARCHITECTURE.md)
 - [권장 구현 순서](docs/IMPLEMENTATION_PLAN.md)
 - [Supabase·Render·GitHub Actions 배포](docs/DEPLOYMENT.md)
+- [Render·Supabase 배포 준비 단계](배포준비단계.md)
 - [Notion API 명세서](https://app.notion.com/p/40e938594612806594b7cf3ffb1f1cc8)
 
 ## Code Review
