@@ -64,7 +64,7 @@ docker build -t pawfit-api .
 
 ## Code Review
 
-CodeRabbit Open Source 무료 Review를 사용합니다. `develop`과 `main` 대상 PR은 자동 Review하며, 세부 기준은 [CodeRabbit 설정](.coderabbit.yaml)에 정의합니다. 자동 Approval은 사용하지 않으므로 최종 Merge 전에는 백엔드 팀원의 Review가 필요합니다.
+CodeRabbit Open Source 무료 Review를 사용합니다. GitHub App 권한은 `Advanced-Swiftly/BE` Repository에만 부여합니다. `develop`과 `main` 대상 PR은 자동 Review하며, 세부 기준은 [CodeRabbit 설정](.coderabbit.yaml)에 정의합니다. 자동 Approval은 사용하지 않으므로 최종 Merge 전에는 백엔드 팀원의 Review가 필요합니다.
 
 ## 브랜치와 협업
 
