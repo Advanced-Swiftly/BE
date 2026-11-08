@@ -10,6 +10,8 @@ public interface DogRepository extends JpaRepository<Dog, Long> {
 
     long countByUserId(Long userId);
 
+    long countByIdInAndUserId(List<Long> dogIds, Long userId);
+
     @EntityGraph(attributePaths = {"breed"})
     List<Dog> findAllByUserIdOrderByDefaultDogDescIdAsc(Long userId);
 
