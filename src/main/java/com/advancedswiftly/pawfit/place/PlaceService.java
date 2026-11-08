@@ -80,10 +80,13 @@ class PlaceService {
         Place place = requirePlace(placeId);
         Policy policy = policies(List.of(placeId)).get(placeId);
         var result = evaluate(policy, profiles(auth, dogIds));
+        String googleMapsUrl = "https://www.google.com/maps/search/?api=1&query="
+                + place.latitude().stripTrailingZeros().toPlainString() + "%2C"
+                + place.longitude().stripTrailingZeros().toPlainString();
         return new Detail(place.id(), place.name(), place.address(), place.latitude(), place.longitude(),
                 result.overallVerdict(), result.dogs().stream().flatMap(dog -> dog.reasons().stream()).distinct()
                         .toList(), unrestricted(policy), policy == null ? null : policy.source(),
-                policy == null ? null : policy.confirmedOn());
+                policy == null ? null : policy.confirmedOn(), googleMapsUrl);
     }
 
     public Judgment judge(Authentication auth, String placeId, List<Long> dogIds) {
@@ -216,7 +219,7 @@ class PlaceService {
     record MapResult(List<Card> places) {}
     record Detail(String placeId, String name, String address, BigDecimal latitude, BigDecimal longitude,
                   Verdict verdict, List<String> reasons, List<String> unrestrictedFields,
-                  String policySource, LocalDate confirmedOn) {}
+                  String policySource, LocalDate confirmedOn, String googleMapsUrl) {}
     record DogResult(long dogId, Verdict verdict, List<String> reasons) {}
     record Judgment(Verdict overallVerdict, List<DogResult> dogs) {}
 }
