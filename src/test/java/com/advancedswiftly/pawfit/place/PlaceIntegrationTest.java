@@ -75,7 +75,9 @@ class PlaceIntegrationTest {
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/api/v1/places/PUBLIC:200").with(guardian)
                         .param("dogIds", small.getId().toString()))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.verdict").value("CHECK_REQUIRED"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.verdict").value("CHECK_REQUIRED"))
+                .andExpect(jsonPath("$.googleMapsUrl")
+                        .value("https://www.google.com/maps/search/?api=1&query=37.5%2C127"));
         mvc.perform(get("/api/v1/places/STORE:101").with(guardian))
                 .andExpect(status().isNotFound());
         String selection = "{\"dogIds\":[%d,%d]}".formatted(small.getId(), large.getId());

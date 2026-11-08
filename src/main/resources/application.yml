@@ -49,6 +49,8 @@ springdoc:
     tags-sorter: alpha
 
 pawfit:
+  places:
+    data-go-kr-service-key: ${DATA_GO_KR_SERVICE_KEY:}
   auth:
     jwt-secret: ${JWT_SECRET:pawfit-local-jwt-secret-change-before-production-2026}
     access-token-ttl: ${AUTH_ACCESS_TOKEN_TTL:30m}
