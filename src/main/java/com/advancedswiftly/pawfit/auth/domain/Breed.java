@@ -25,6 +25,15 @@ public class Breed {
     protected Breed() {
     }
 
+    private Breed(String name) {
+        this.name = name;
+        this.active = true;
+    }
+
+    public static Breed create(String name) {
+        return new Breed(name);
+    }
+
     public Long getId() {
         return id;
     }
