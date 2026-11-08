@@ -18,6 +18,10 @@ spring:
     enabled: true
     locations: classpath:db/migration
     validate-on-migrate: true
+    # Supabase는 새 프로젝트도 public schema에 system object가 존재하므로
+    # 최초 배포에서 version 0 baseline을 만든 뒤 모든 migration을 적용합니다.
+    baseline-on-migrate: true
+    baseline-version: 0
 
 logging:
   level:
