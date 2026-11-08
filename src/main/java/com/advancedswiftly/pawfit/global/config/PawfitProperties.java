@@ -12,6 +12,7 @@ public class PawfitProperties {
     private final Cors cors = new Cors();
     private final Storage storage = new Storage();
     private final Ai ai = new Ai();
+    private final Auth auth = new Auth();
 
     public Cors getCors() {
         return cors;
@@ -23,6 +24,86 @@ public class PawfitProperties {
 
     public Ai getAi() {
         return ai;
+    }
+
+    public Auth getAuth() {
+        return auth;
+    }
+
+    public static class Auth {
+
+        private String jwtSecret = "pawfit-local-jwt-secret-change-before-production-2026";
+        private Duration accessTokenTtl = Duration.ofMinutes(30);
+        private Duration refreshTokenTtl = Duration.ofDays(30);
+        private Duration verificationCodeTtl = Duration.ofMinutes(3);
+        private Duration verificationTokenTtl = Duration.ofMinutes(10);
+        private Duration verificationResendCooldown = Duration.ofMinutes(1);
+        private int verificationHourlyLimit = 5;
+        private int verificationMaxAttempts = 5;
+
+        public String getJwtSecret() {
+            return jwtSecret;
+        }
+
+        public void setJwtSecret(String jwtSecret) {
+            this.jwtSecret = jwtSecret;
+        }
+
+        public Duration getAccessTokenTtl() {
+            return accessTokenTtl;
+        }
+
+        public void setAccessTokenTtl(Duration accessTokenTtl) {
+            this.accessTokenTtl = accessTokenTtl;
+        }
+
+        public Duration getRefreshTokenTtl() {
+            return refreshTokenTtl;
+        }
+
+        public void setRefreshTokenTtl(Duration refreshTokenTtl) {
+            this.refreshTokenTtl = refreshTokenTtl;
+        }
+
+        public Duration getVerificationCodeTtl() {
+            return verificationCodeTtl;
+        }
+
+        public void setVerificationCodeTtl(Duration verificationCodeTtl) {
+            this.verificationCodeTtl = verificationCodeTtl;
+        }
+
+        public Duration getVerificationTokenTtl() {
+            return verificationTokenTtl;
+        }
+
+        public void setVerificationTokenTtl(Duration verificationTokenTtl) {
+            this.verificationTokenTtl = verificationTokenTtl;
+        }
+
+        public Duration getVerificationResendCooldown() {
+            return verificationResendCooldown;
+        }
+
+        public void setVerificationResendCooldown(Duration verificationResendCooldown) {
+            this.verificationResendCooldown = verificationResendCooldown;
+        }
+
+        public int getVerificationHourlyLimit() {
+            return verificationHourlyLimit;
+        }
+
+        public void setVerificationHourlyLimit(int verificationHourlyLimit) {
+            this.verificationHourlyLimit = verificationHourlyLimit;
+        }
+
+        public int getVerificationMaxAttempts() {
+            return verificationMaxAttempts;
+        }
+
+        public void setVerificationMaxAttempts(int verificationMaxAttempts) {
+            this.verificationMaxAttempts = verificationMaxAttempts;
+        }
     }
 
     public static class Cors {
