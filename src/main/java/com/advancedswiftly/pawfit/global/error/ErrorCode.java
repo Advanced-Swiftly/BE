@@ -3,6 +3,8 @@ package com.advancedswiftly.pawfit.global.error;
 import org.springframework.http.HttpStatus;
 
 public enum ErrorCode {
+    SYNC_ALREADY_RUNNING(HttpStatus.CONFLICT, "SYNC_ALREADY_RUNNING", "요청을 처리할 수 없습니다."),
+    PUBLIC_DATA_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "PUBLIC_DATA_UNAVAILABLE", "공공데이터 동기화를 시작할 수 없습니다."),
     INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "INVALID_PASSWORD", "요청을 처리할 수 없습니다."),
     MEMBER_DUPLICATE_PHONE_NUMBER(HttpStatus.BAD_REQUEST, "DUPLICATE_PHONE_NUMBER", "요청을 처리할 수 없습니다."),
     PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "PLACE_NOT_FOUND", "요청을 처리할 수 없습니다."),
