@@ -1,5 +1,8 @@
 package com.advancedswiftly.pawfit.global.security;
 
+import com.advancedswiftly.pawfit.auth.domain.User;
+import com.advancedswiftly.pawfit.auth.infrastructure.UserRepository;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,9 +22,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtTokenProvider tokenProvider;
+    private final UserRepository users;
 
-    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider, UserRepository users) {
         this.tokenProvider = tokenProvider;
+        this.users = users;
     }
 
     @Override
@@ -39,6 +44,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private void authenticate(String token) {
         try {
             JwtTokenProvider.AccessTokenClaims claims = tokenProvider.parseAccessToken(token);
+            if (users.findById(claims.userId())
+                    .filter(User::isActive)
+                    .filter(user -> user.getRole() == claims.role())
+                    .isEmpty()) {
+                SecurityContextHolder.clearContext();
+                return;
+            }
             UsernamePasswordAuthenticationToken authentication =
                     UsernamePasswordAuthenticationToken.authenticated(
                             claims.userId().toString(),
