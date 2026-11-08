@@ -15,6 +15,7 @@ public enum ErrorCode {
     INVALID_ROLE(HttpStatus.BAD_REQUEST, "INVALID_ROLE", "유효하지 않은 가입 역할입니다."),
     DUPLICATE_PHONE_NUMBER(HttpStatus.CONFLICT, "DUPLICATE_PHONE_NUMBER", "이미 가입된 휴대전화 번호입니다."),
     PHONE_DELIVERY_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "PHONE_DELIVERY_UNAVAILABLE", "인증번호 발송 서비스를 일시적으로 사용할 수 없습니다."),
+    INQUIRY_NOT_FOUND(HttpStatus.NOT_FOUND, "INQUIRY_NOT_FOUND", "요청을 처리할 수 없습니다."),
     NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_002", "요청한 리소스를 찾을 수 없습니다."),
     CONFLICT(HttpStatus.CONFLICT, "COMMON_003", "현재 상태에서는 요청을 처리할 수 없습니다."),
     DUPLICATE_BUSINESS_NUMBER(HttpStatus.BAD_REQUEST, "DUPLICATE_BUSINESS_NUMBER", "요청을 처리할 수 없습니다."),
