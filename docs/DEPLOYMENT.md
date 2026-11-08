@@ -30,6 +30,13 @@ Supabase의 `public` schema에는 새 프로젝트에서도 system object가 존
 `render.yaml`은 Singapore, Free, Docker, `develop` 브랜치를 사용합니다.
 `autoDeployTrigger: checksPass`이므로 GitHub Actions 검사가 성공한 커밋만 Render가 배포합니다.
 
+### 시연용 휴대전화 인증
+
+현재 Blueprint는 `PHONE_VERIFICATION_DEMO_ENABLED=true`와 고정 인증번호 `123456`을
+사용합니다. 인증번호 만료, 실패 횟수, 시간당 요청 제한, 일회성 인증 token 규칙은
+실제 발송 방식과 동일하게 적용됩니다. 공개 배포에서 누구나 번호를 알 수 있는 시연
+전용 설정이므로 실제 운영 전에는 반드시 demo mode를 끄고 SMS provider를 연결합니다.
+
 ## 3. GitHub Actions
 
 흐름:

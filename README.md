@@ -46,7 +46,9 @@ docker build -t pawfit-api .
 | `DB_USERNAME` | DB 사용자 | 배포 |
 | `DB_PASSWORD` | DB 비밀번호 | 배포 |
 | `CORS_ALLOWED_ORIGINS` | 쉼표 구분 프론트엔드 origin | 배포 |
-| `JWT_SECRET` | JWT 서명 키(인증 구현 시 사용) | 배포 |
+| `JWT_SECRET` | JWT 서명 키(32 byte 이상) | 배포 |
+| `PHONE_VERIFICATION_DEMO_ENABLED` | 시연용 고정 인증번호 사용 여부 | 시연 배포 |
+| `PHONE_VERIFICATION_DEMO_CODE` | 시연용 6자리 인증번호 | 시연 배포 |
 | `SUPABASE_URL` | Supabase 프로젝트 URL | 파일 기능 |
 | `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 Storage 키 | 파일 기능 |
 | `SUPABASE_STORAGE_BUCKET` | Storage bucket 이름 | 파일 기능 |
@@ -59,6 +61,8 @@ docker build -t pawfit-api .
 `gemini-3.8-flash`를 사용합니다. Workers AI 구현은 대체 provider로 유지합니다.
 
 실제 비밀값은 Git이나 설정 파일에 커밋하지 않습니다.
+현재 시연 배포는 휴대전화 인증번호를 `123456`으로 고정합니다. 실제 운영으로 전환할
+때는 `PHONE_VERIFICATION_DEMO_ENABLED=false`로 변경하고 SMS provider를 연결해야 합니다.
 
 ## 문서
 
