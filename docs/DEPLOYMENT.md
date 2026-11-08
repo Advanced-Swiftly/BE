@@ -14,6 +14,10 @@
 
 Render는 장기 실행 컨테이너이며 Free 환경에서 IPv4 연결이 필요하므로 Supabase Session pooler를 사용합니다. Hikari 최대 연결 수는 기본 5로 제한했습니다.
 
+Supabase의 `public` schema에는 새 프로젝트에서도 system object가 존재할 수 있습니다.
+운영 Flyway는 최초 실행 시 version 0 baseline을 만든 뒤 V1부터 migration을 적용하며,
+이후 배포에서는 `flyway_schema_history`를 기준으로 일반 migration만 실행합니다.
+
 ## 2. Render
 
 1. Render Dashboard에서 **New > Blueprint**를 선택합니다.
