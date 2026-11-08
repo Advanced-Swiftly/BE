@@ -72,7 +72,7 @@ public class PhoneVerificationService {
         Instant now = clock.instant();
         enforceRateLimit(phoneNumber, now);
 
-        String code = "%06d".formatted(secureRandom.nextInt(1_000_000));
+        String code = verificationCode();
         PhoneVerification verification = repository.saveAndFlush(PhoneVerification.start(
                 phoneNumber,
                 purpose,
@@ -131,5 +131,16 @@ public class PhoneVerificationService {
         byte[] bytes = new byte[32];
         secureRandom.nextBytes(bytes);
         return TOKEN_ENCODER.encodeToString(bytes);
+    }
+
+    private String verificationCode() {
+        if (properties.isVerificationDemoEnabled()) {
+            String demoCode = properties.getVerificationDemoCode();
+            if (demoCode == null || !demoCode.matches("^\\d{6}$")) {
+                throw new IllegalStateException("시연용 인증번호는 6자리 숫자여야 합니다.");
+            }
+            return demoCode;
+        }
+        return "%06d".formatted(secureRandom.nextInt(1_000_000));
     }
 }

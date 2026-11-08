@@ -24,6 +24,11 @@ services:
         sync: false
       - key: JWT_SECRET
         generateValue: true
+      # 시연 기간에만 고정 인증번호를 사용합니다. 실제 운영 전 false로 전환합니다.
+      - key: PHONE_VERIFICATION_DEMO_ENABLED
+        value: "true"
+      - key: PHONE_VERIFICATION_DEMO_CODE
+        value: "123456"
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY

@@ -32,7 +32,9 @@ import org.springframework.test.web.servlet.MvcResult;
 @Import(AuthControllerIntegrationTest.SenderTestConfiguration.class)
 @TestPropertySource(properties = {
         "spring.jpa.hibernate.ddl-auto=create-drop",
-        "pawfit.auth.verification-resend-cooldown=0s"
+        "pawfit.auth.verification-resend-cooldown=0s",
+        "pawfit.auth.verification-demo-enabled=true",
+        "pawfit.auth.verification-demo-code=123456"
 })
 class AuthControllerIntegrationTest {
 
@@ -82,6 +84,7 @@ class AuthControllerIntegrationTest {
         Number verificationId = JsonPath.read(
                 sendResult.getResponse().getContentAsString(), "$.verificationId");
         assertThat(sender.phoneNumber()).isEqualTo("01012345678");
+        assertThat(sender.code()).isEqualTo("123456");
 
         MvcResult confirmResult = mockMvc.perform(post("/api/v1/auth/phone-verifications/confirm")
                         .contentType(MediaType.APPLICATION_JSON)

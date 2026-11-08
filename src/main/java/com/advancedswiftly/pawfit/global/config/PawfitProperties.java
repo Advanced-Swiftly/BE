@@ -40,6 +40,8 @@ public class PawfitProperties {
         private Duration verificationResendCooldown = Duration.ofMinutes(1);
         private int verificationHourlyLimit = 5;
         private int verificationMaxAttempts = 5;
+        private boolean verificationDemoEnabled;
+        private String verificationDemoCode = "123456";
 
         public String getJwtSecret() {
             return jwtSecret;
@@ -103,6 +105,22 @@ public class PawfitProperties {
 
         public void setVerificationMaxAttempts(int verificationMaxAttempts) {
             this.verificationMaxAttempts = verificationMaxAttempts;
+        }
+
+        public boolean isVerificationDemoEnabled() {
+            return verificationDemoEnabled;
+        }
+
+        public void setVerificationDemoEnabled(boolean verificationDemoEnabled) {
+            this.verificationDemoEnabled = verificationDemoEnabled;
+        }
+
+        public String getVerificationDemoCode() {
+            return verificationDemoCode;
+        }
+
+        public void setVerificationDemoCode(String verificationDemoCode) {
+            this.verificationDemoCode = verificationDemoCode;
         }
     }
 
