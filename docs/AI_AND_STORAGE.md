@@ -25,8 +25,12 @@ business/{businessId}/{uuid}.{extension}
 
 `AI_PROVIDER`로 구현체를 선택합니다.
 
-- `GEMINI`: `GEMINI_API_KEY`, `GEMINI_MODEL`
+- 운영 기본값 `GEMINI`: `GEMINI_API_KEY`, `GEMINI_MODEL=gemini-3.8-flash`
 - `WORKERS_AI`: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, text/vision model
+
+PawFit은 예방접종 이미지·PDF 분석과 구조화 JSON 응답이 핵심이므로 운영에서는
+Gemini 3.8 Flash를 사용합니다. Workers AI는 대체 provider로만 유지하며 Render에는
+Cloudflare Secret을 기본 등록하지 않습니다.
 
 공통 설정:
 
