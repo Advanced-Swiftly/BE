@@ -49,12 +49,4 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
-        value: gemini-2.5-flash
-      - key: CLOUDFLARE_ACCOUNT_ID
-        sync: false
-      - key: CLOUDFLARE_API_TOKEN
-        sync: false
-      - key: CLOUDFLARE_TEXT_MODEL
-        value: "@cf/meta/llama-3.1-8b-instruct"
-      - key: CLOUDFLARE_VISION_MODEL
-        value: "@cf/meta/llama-3.2-11b-vision-instruct"
+        value: gemini-3.8-flash

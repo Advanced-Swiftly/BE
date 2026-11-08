@@ -50,10 +50,13 @@ docker build -t pawfit-api .
 | `SUPABASE_URL` | Supabase 프로젝트 URL | 파일 기능 |
 | `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 Storage 키 | 파일 기능 |
 | `SUPABASE_STORAGE_BUCKET` | Storage bucket 이름 | 파일 기능 |
-| `AI_PROVIDER` | `GEMINI` 또는 `WORKERS_AI` | AI 기능 |
+| `AI_PROVIDER` | 기본 `GEMINI`, 선택 `WORKERS_AI` | AI 기능 |
 | `AI_TIMEOUT`, `AI_MAX_RETRIES` | AI timeout·재시도 | AI 기능 |
 | `GEMINI_API_KEY` | Gemini OCR·챗봇 API 키 | Gemini 선택 시 |
 | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` | Workers AI 인증 | Workers AI 선택 시 |
+
+운영 배포는 이미지·PDF 이해와 구조화 출력 품질을 위해 `GEMINI`와
+`gemini-3.8-flash`를 사용합니다. Workers AI 구현은 대체 provider로 유지합니다.
 
 실제 비밀값은 Git이나 설정 파일에 커밋하지 않습니다.
 
