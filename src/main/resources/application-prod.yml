@@ -11,7 +11,9 @@ spring:
       max-lifetime: 1800000
   jpa:
     hibernate:
-      ddl-auto: validate
+      # ERD가 PostgreSQL migration으로 확정되기 전까지 Entity 기준으로 필요한 표를 생성·보정합니다.
+      # 전체 Flyway schema가 준비되면 Render에서 JPA_DDL_AUTO=validate로 전환합니다.
+      ddl-auto: ${JPA_DDL_AUTO:update}
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -21,3 +23,9 @@ logging:
   level:
     root: INFO
     com.advancedswiftly.pawfit: INFO
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
