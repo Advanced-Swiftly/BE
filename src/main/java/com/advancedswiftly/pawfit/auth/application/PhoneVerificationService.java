@@ -105,10 +105,19 @@ public class PhoneVerificationService {
 
     @Transactional
     public String consumeSignupToken(String verificationToken) {
+        return consumeToken(verificationToken, PhoneVerificationPurpose.SIGN_UP);
+    }
+
+    @Transactional
+    public String consumeChangePhoneToken(String verificationToken) {
+        return consumeToken(verificationToken, PhoneVerificationPurpose.CHANGE_PHONE);
+    }
+
+    private String consumeToken(String verificationToken, PhoneVerificationPurpose purpose) {
         Instant now = clock.instant();
         PhoneVerification verification = repository
                 .findByVerificationTokenHash(TokenHash.sha256(verificationToken))
-                .filter(value -> value.canConsumeAt(now, PhoneVerificationPurpose.SIGN_UP))
+                .filter(value -> value.canConsumeAt(now, purpose))
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_VERIFICATION_TOKEN));
         verification.consume(now);
         return verification.getPhoneNumber();

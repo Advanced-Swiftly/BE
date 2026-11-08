@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.ColumnDefault;
 
 @Entity
 @Table(name = "app_user")
@@ -35,6 +36,44 @@ public class User extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private UserStatus status;
+
+    @Column(name = "notify_event", nullable = false)
+    @ColumnDefault("true")
+    private boolean notifyEvent = true;
+    @Column(name = "notify_inquiry", nullable = false)
+    @ColumnDefault("true")
+    private boolean notifyInquiry = true;
+    @Column(name = "notify_review_result", nullable = false)
+    @ColumnDefault("true")
+    private boolean notifyReviewResult = true;
+    @Column(name = "notify_marketing", nullable = false)
+    @ColumnDefault("false")
+    private boolean notifyMarketing;
+    @Column(name = "withdrawal_reason", length = 500)
+    private String withdrawalReason;
+
+    public void updateProfile(String name, String phoneNumber) {
+        if (name != null) this.name = name.strip();
+        if (phoneNumber != null) this.phoneNumber = phoneNumber;
+    }
+
+    public void updateNotifications(Boolean event, Boolean inquiry, Boolean reviewResult, Boolean marketing) {
+        if (event != null) notifyEvent = event;
+        if (inquiry != null) notifyInquiry = inquiry;
+        if (reviewResult != null) notifyReviewResult = reviewResult;
+        if (marketing != null) notifyMarketing = marketing;
+    }
+
+    public boolean isNotifyEvent() { return notifyEvent; }
+    public boolean isNotifyInquiry() { return notifyInquiry; }
+    public boolean isNotifyReviewResult() { return notifyReviewResult; }
+    public boolean isNotifyMarketing() { return notifyMarketing; }
+
+    public void withdraw(String reason) {
+        status = UserStatus.WITHDRAWN;
+        withdrawalReason = reason;
+        updateNotifications(false, false, false, false);
+    }
 
     protected User() {
     }
