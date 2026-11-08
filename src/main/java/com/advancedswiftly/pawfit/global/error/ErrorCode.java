@@ -3,6 +3,8 @@ package com.advancedswiftly.pawfit.global.error;
 import org.springframework.http.HttpStatus;
 
 public enum ErrorCode {
+    PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "PLACE_NOT_FOUND", "요청을 처리할 수 없습니다."),
+    DOG_NOT_OWNED(HttpStatus.FORBIDDEN, "DOG_NOT_OWNED", "요청을 처리할 수 없습니다."),
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "COMMON_001", "요청 값이 올바르지 않습니다."),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "AUTH_001", "인증이 필요합니다."),
     FORBIDDEN(HttpStatus.FORBIDDEN, "AUTH_002", "접근 권한이 없습니다."),
