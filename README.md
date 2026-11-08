@@ -50,16 +50,20 @@ docker build -t pawfit-api .
 | `SUPABASE_URL` | Supabase 프로젝트 URL | 파일 기능 |
 | `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 Storage 키 | 파일 기능 |
 | `SUPABASE_STORAGE_BUCKET` | Storage bucket 이름 | 파일 기능 |
-| `GEMINI_API_KEY` | OCR·챗봇 API 키 | AI 기능 |
+| `AI_PROVIDER` | `GEMINI` 또는 `WORKERS_AI` | AI 기능 |
+| `AI_TIMEOUT`, `AI_MAX_RETRIES` | AI timeout·재시도 | AI 기능 |
+| `GEMINI_API_KEY` | Gemini OCR·챗봇 API 키 | Gemini 선택 시 |
+| `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` | Workers AI 인증 | Workers AI 선택 시 |
 
 실제 비밀값은 Git이나 설정 파일에 커밋하지 않습니다.
 
 ## 문서
 
-- [담당 API 9개 도메인·51개 목록](docs/API_SCOPE.md)
+- [Notion 기준 115개 API 범위](docs/API_SCOPE.md)
 - [아키텍처와 패키지 규칙](docs/ARCHITECTURE.md)
 - [권장 구현 순서](docs/IMPLEMENTATION_PLAN.md)
 - [Supabase·Render·GitHub Actions 배포](docs/DEPLOYMENT.md)
+- [AI·Storage 정책과 실패 처리](docs/AI_AND_STORAGE.md)
 - [Render·Supabase 배포 준비 단계](배포준비단계.md)
 - [Notion API 명세서](https://app.notion.com/p/40e938594612806594b7cf3ffb1f1cc8)
 

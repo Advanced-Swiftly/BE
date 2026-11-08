@@ -7,7 +7,9 @@
 - [x] Security 기본 정책, CORS, 오류 응답, request id
 - [x] Swagger UI, Actuator
 - [x] GitHub Actions CI/CD, Render Blueprint
-- [ ] ERD를 PostgreSQL 타입으로 검토하고 Flyway migration 작성
+- [x] 초기 개발용 `ddl-auto=update`와 추후 `validate` 전환점 구성
+- [x] Supabase Storage private bucket·signed URL·보상 삭제 adapter
+- [x] Gemini/Workers AI provider·timeout·retry·수동 검토 fallback
 - [ ] 프론트엔드와 공통 응답·페이지네이션·파일 업로드 규격 확정
 
 ## 1. 인증과 기준 정보
@@ -45,6 +47,16 @@
 - QR 재사용 방지와 스탬프 중복 적립 방지
 
 완료 조건: 동시 요청에서도 방문·응모·스탬프가 한 번만 처리되고, 챗봇 장애가 핵심 API를 막지 않습니다.
+
+## 5. 업체·운영자
+
+- 업체 인증 4개
+- 업체 운영 15개
+- 업체 신청 8개
+- 운영자 심사 37개
+
+완료 조건: 보호자·업체·운영자 권한이 단일 Spring Boot 서비스 안에서 분리되고,
+신청·심사 상태 전이가 Notion API 명세와 일치합니다.
 
 ## 협업 규칙
 
