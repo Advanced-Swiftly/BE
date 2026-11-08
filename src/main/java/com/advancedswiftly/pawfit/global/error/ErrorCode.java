@@ -3,6 +3,9 @@ package com.advancedswiftly.pawfit.global.error;
 import org.springframework.http.HttpStatus;
 
 public enum ErrorCode {
+    CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_SESSION_NOT_FOUND", "요청을 처리할 수 없습니다."),
+    CHAT_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "CHAT_SERVICE_UNAVAILABLE", "요청을 처리할 수 없습니다."),
+    CHAT_SESSION_CHANGED(HttpStatus.CONFLICT, "CHAT_SESSION_CHANGED", "대화가 갱신되었습니다. 다시 시도해 주세요."),
     SYNC_ALREADY_RUNNING(HttpStatus.CONFLICT, "SYNC_ALREADY_RUNNING", "요청을 처리할 수 없습니다."),
     PUBLIC_DATA_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "PUBLIC_DATA_UNAVAILABLE", "공공데이터 동기화를 시작할 수 없습니다."),
     INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "INVALID_PASSWORD", "요청을 처리할 수 없습니다."),
