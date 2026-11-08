@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
-class PlaceService {
+public class PlaceService {
     private static final RowMapper<Place> PLACE = (rs, row) -> new Place(
             rs.getString("place_id"), rs.getString("name"), rs.getString("address"),
             rs.getBigDecimal("latitude"), rs.getBigDecimal("longitude"));
@@ -92,6 +92,13 @@ class PlaceService {
     public Judgment judge(Authentication auth, String placeId, List<Long> dogIds) {
         requirePlace(placeId);
         return evaluate(policies(List.of(placeId)).get(placeId), profiles(auth, dogIds));
+    }
+
+    public List<Card> chatCandidates(Authentication auth, List<Long> dogIds,
+            BigDecimal latitude, BigDecimal longitude) {
+        return latitude == null
+                ? search(auth, null, null, null, dogIds, 0, 12).items()
+                : map(auth, latitude, longitude, 5000, null, dogIds).places().stream().limit(12).toList();
     }
 
     private List<Card> cards(List<Place> places, List<Profile> profiles) {
@@ -201,7 +208,7 @@ class PlaceService {
         }
     }
 
-    enum Verdict {
+    public enum Verdict {
         ENTRY_OK, PREPARE, CHECK_REQUIRED, ENTRY_DENIED;
 
         Verdict worse(Verdict other) {
@@ -214,7 +221,7 @@ class PlaceService {
     private record Rule(String placeId, String type, String code) {}
     private record Policy(String id, boolean allowed, BigDecimal maxWeight, String source,
                           LocalDate confirmedOn, List<Rule> rules) {}
-    record Card(String placeId, String name, BigDecimal latitude, BigDecimal longitude, Verdict verdict) {}
+    public record Card(String placeId, String name, BigDecimal latitude, BigDecimal longitude, Verdict verdict) {}
     record Search(List<Card> items, int page, long total) {}
     record MapResult(List<Card> places) {}
     record Detail(String placeId, String name, String address, BigDecimal latitude, BigDecimal longitude,
