@@ -46,6 +46,10 @@ public class ConditionRequest extends BaseEntity {
     @Column(name = "status", nullable = false, length = 20)
     private ConditionRequestStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "kind", length = 20)
+    private ConditionRequestKind kind;
+
     @Column(name = "review_note", length = 500)
     private String reviewNote;
 
@@ -81,6 +85,7 @@ public class ConditionRequest extends BaseEntity {
         this.requestedRules = new ArrayList<>(requestedRules);
         this.evidenceUrls = new ArrayList<>(evidenceUrls);
         this.status = ConditionRequestStatus.RECEIVED;
+        this.kind = ConditionRequestKind.CONDITION_REQUEST;
     }
 
     public static ConditionRequest receive(
@@ -91,6 +96,31 @@ public class ConditionRequest extends BaseEntity {
             List<PolicyRule> requestedRules,
             List<String> evidenceUrls) {
         return new ConditionRequest(storeId, baseVersion, sourceText, submittedBy, requestedRules, evidenceUrls);
+    }
+
+    /** 운영자가 근거와 함께 정책을 직접 바꾼 기록. 처음부터 승인된 상태로 남긴다. */
+    public static ConditionRequest operatorDirect(
+            Long storeId,
+            int baseVersion,
+            String sourceText,
+            Long operatorId,
+            List<PolicyRule> rules,
+            String reason) {
+        ConditionRequest request =
+                new ConditionRequest(storeId, baseVersion, sourceText, operatorId, rules, List.of());
+        request.kind = ConditionRequestKind.OPERATOR_DIRECT;
+        request.review(ConditionRequestStatus.APPROVED, reason, operatorId);
+        return request;
+    }
+
+    /** 운영자 심사 결과를 반영한다. note가 null이면 기존 심사 의견을 유지한다. */
+    public void review(ConditionRequestStatus target, String note, Long reviewerId) {
+        this.status = target;
+        if (note != null) {
+            this.reviewNote = note;
+        }
+        this.reviewedBy = reviewerId;
+        this.reviewedAt = Instant.now();
     }
 
     /** 대기 중(접수됨 또는 보완 요청됨)인 요청만 취소할 수 있다. */
@@ -147,6 +177,10 @@ public class ConditionRequest extends BaseEntity {
 
     public Long getSubmittedBy() {
         return submittedBy;
+    }
+
+    public ConditionRequestKind getKind() {
+        return kind == null ? ConditionRequestKind.CONDITION_REQUEST : kind;
     }
 
     public ConditionRequestStatus getStatus() {
