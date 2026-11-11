@@ -37,6 +37,7 @@ public enum ErrorCode {
     RECORD_NOT_EDITABLE(HttpStatus.BAD_REQUEST, "RECORD_NOT_EDITABLE", "요청을 처리할 수 없습니다."),
     NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_002", "요청한 리소스를 찾을 수 없습니다."),
     CONFLICT(HttpStatus.CONFLICT, "COMMON_003", "현재 상태에서는 요청을 처리할 수 없습니다."),
+    POLICY_VERSION_CONFLICT(HttpStatus.CONFLICT, "POLICY_VERSION_CONFLICT", "요청을 처리할 수 없습니다."),
     DUPLICATE_APPLICATION(HttpStatus.BAD_REQUEST, "DUPLICATE_APPLICATION", "요청을 처리할 수 없습니다."),
     CANCEL_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "CANCEL_NOT_ALLOWED", "요청을 처리할 수 없습니다."),
     DUPLICATE_BUSINESS_NUMBER(HttpStatus.BAD_REQUEST, "DUPLICATE_BUSINESS_NUMBER", "요청을 처리할 수 없습니다."),
