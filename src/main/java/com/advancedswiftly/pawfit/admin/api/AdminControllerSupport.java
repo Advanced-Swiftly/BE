@@ -64,4 +64,28 @@ final class AdminControllerSupport {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, name + " 값이 올바르지 않습니다.");
         }
     }
+
+    /** 선택 정수 파라미터. 비어 있으면 null, 숫자가 아니면 400. */
+    static Integer optionalInt(String name, String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(value.trim());
+        } catch (NumberFormatException exception) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, name + " 값이 올바르지 않습니다.");
+        }
+    }
+
+    /** 선택 ID 파라미터. 비어 있으면 null, 숫자가 아니면 400. */
+    static Long optionalLong(String name, String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            return Long.valueOf(value.trim());
+        } catch (NumberFormatException exception) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, name + " 값이 올바르지 않습니다.");
+        }
+    }
 }
