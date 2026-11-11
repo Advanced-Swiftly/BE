@@ -2,6 +2,7 @@ package com.advancedswiftly.pawfit.business.api;
 
 import com.advancedswiftly.pawfit.business.api.dto.VerificationCreateRequest;
 import com.advancedswiftly.pawfit.business.api.dto.VerificationCreateResponse;
+import com.advancedswiftly.pawfit.business.api.dto.VerificationDetailResponse;
 import com.advancedswiftly.pawfit.business.api.dto.VerificationListResponse;
 import com.advancedswiftly.pawfit.business.api.dto.VerificationResubmitRequest;
 import com.advancedswiftly.pawfit.business.application.BusinessVerificationService;
@@ -77,6 +78,23 @@ public class BusinessVerificationController {
             @RequestParam(required = false) String status) {
         return verificationService.getMyVerifications(
                 currentUserId(authentication), parseStatus(status));
+    }
+
+    @Operation(
+            summary = "사업자 인증 상세 조회",
+            description = "본인이 제출한 사업자 인증 건의 처리 상태와 심사 의견(보완 요청·승인·반려 사유)을 조회합니다. "
+                    + "심사 전에는 reviewComment 필드가 응답에서 빠집니다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
+    @ApiResponse(responseCode = "400", description = "요청 값 오류")
+    @ApiResponse(responseCode = "401", description = "인증 필요")
+    @ApiResponse(responseCode = "403", description = "업체 관리자 권한 필요")
+    @ApiResponse(responseCode = "404", description = "존재하지 않거나 본인의 인증 건이 아님")
+    @PreAuthorize("hasRole('BUSINESS')")
+    @GetMapping("/{verificationId}")
+    public VerificationDetailResponse getMyVerification(
+            Authentication authentication,
+            @Parameter(description = "사업자 인증 ID", example = "1101") @PathVariable Long verificationId) {
+        return verificationService.getMyVerification(currentUserId(authentication), verificationId);
     }
 
     @Operation(
