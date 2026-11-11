@@ -6,5 +6,6 @@ public enum ConditionRequestStatus {
     IN_REVIEW,
     NEEDS_SUPPLEMENT,
     APPROVED,
-    REJECTED
+    REJECTED,
+    CANCELED
 }

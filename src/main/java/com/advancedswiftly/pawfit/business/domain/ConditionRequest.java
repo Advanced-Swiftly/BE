@@ -93,6 +93,42 @@ public class ConditionRequest extends BaseEntity {
         return new ConditionRequest(storeId, baseVersion, sourceText, submittedBy, requestedRules, evidenceUrls);
     }
 
+    /** 대기 중(접수됨 또는 보완 요청됨)인 요청만 취소할 수 있다. */
+    public boolean canCancel() {
+        return status == ConditionRequestStatus.RECEIVED || status == ConditionRequestStatus.NEEDS_SUPPLEMENT;
+    }
+
+    /** 보완 요청(NEEDS_SUPPLEMENT)을 받은 요청만 보완 제출할 수 있다. */
+    public boolean canResubmit() {
+        return status == ConditionRequestStatus.NEEDS_SUPPLEMENT;
+    }
+
+    public void cancel() {
+        this.status = ConditionRequestStatus.CANCELED;
+    }
+
+    /**
+     * 보완 내용을 반영하고 다시 접수(RECEIVED) 상태로 돌린다.
+     * null인 항목은 유지하고, 근거 URL은 기존 목록에 없는 것만 추가한다.
+     */
+    public void resubmit(List<PolicyRule> rules, String sourceText, List<String> additionalEvidenceUrls) {
+        if (rules != null) {
+            this.requestedRules.clear();
+            this.requestedRules.addAll(rules);
+        }
+        if (sourceText != null) {
+            this.sourceText = sourceText;
+        }
+        if (additionalEvidenceUrls != null) {
+            for (String url : additionalEvidenceUrls) {
+                if (!this.evidenceUrls.contains(url)) {
+                    this.evidenceUrls.add(url);
+                }
+            }
+        }
+        this.status = ConditionRequestStatus.RECEIVED;
+    }
+
     public Long getId() {
         return id;
     }

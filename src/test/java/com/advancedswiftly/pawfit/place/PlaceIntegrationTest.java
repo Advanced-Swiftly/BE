@@ -94,7 +94,7 @@ class PlaceIntegrationTest {
     private void apply(String migration) throws Exception {
         var resource = new ClassPathResource("db/migration/" + migration);
         for (String sql : resource.getContentAsString(StandardCharsets.UTF_8).split(";")) {
-            if (!sql.isBlank() && !sql.contains("ENABLE ROW LEVEL SECURITY")) db.execute(sql);
+            if (!sql.isBlank() && !sql.contains("ENABLE ROW LEVEL SECURITY")) db.execute(sql.replace("ADD COLUMN region_id", "ADD COLUMN IF NOT EXISTS region_id"));
         }
     }
 }
