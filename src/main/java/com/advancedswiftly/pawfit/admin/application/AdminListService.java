@@ -4,7 +4,11 @@ import com.advancedswiftly.pawfit.admin.api.dto.AdminAdApplicationListItem;
 import com.advancedswiftly.pawfit.admin.api.dto.AdminAdApplicationListResponse;
 import com.advancedswiftly.pawfit.admin.api.dto.AdminEventApplicationListItem;
 import com.advancedswiftly.pawfit.admin.api.dto.AdminEventApplicationListResponse;
+import com.advancedswiftly.pawfit.admin.api.dto.ConditionReviewListItem;
+import com.advancedswiftly.pawfit.admin.api.dto.ConditionReviewListResponse;
 import com.advancedswiftly.pawfit.business.domain.AdType;
+import com.advancedswiftly.pawfit.business.domain.ConditionRequestKind;
+import com.advancedswiftly.pawfit.business.domain.ConditionRequestStatus;
 import com.advancedswiftly.pawfit.business.domain.ApplicationStatus;
 import java.sql.Date;
 import java.time.LocalDate;
@@ -113,5 +117,36 @@ public class AdminListService {
                     item.status(), item.createdAt()));
         }
         return new AdminEventApplicationListResponse(withRegions);
+    }
+
+    /** 이전에 kind가 없던 요청은 업체 요청(CONDITION_REQUEST)으로 본다. */
+    @Transactional(readOnly = true)
+    public ConditionReviewListResponse listConditionRequests(
+            ConditionRequestKind kind, ConditionRequestStatus status, Long storeId, int page) {
+        StringBuilder sql = new StringBuilder(
+                "SELECT request_id, store_id, COALESCE(kind, 'CONDITION_REQUEST'), status, created_at "
+                        + "FROM condition_request WHERE 1 = 1");
+        List<Object> args = new ArrayList<>();
+        if (kind != null) {
+            sql.append(" AND COALESCE(kind, 'CONDITION_REQUEST') = ?");
+            args.add(kind.name());
+        }
+        if (status != null) {
+            sql.append(" AND status = ?");
+            args.add(status.name());
+        }
+        if (storeId != null) {
+            sql.append(" AND store_id = ?");
+            args.add(storeId);
+        }
+        sql.append(" ORDER BY request_id DESC LIMIT ? OFFSET ?");
+        args.add(PAGE_SIZE);
+        args.add((page - 1) * PAGE_SIZE);
+        List<ConditionReviewListItem> items = jdbcTemplate.query(
+                sql.toString(),
+                (rs, rowNum) -> new ConditionReviewListItem(
+                        rs.getLong(1), rs.getLong(2), rs.getString(3), rs.getString(4), rs.getTimestamp(5).toInstant()),
+                args.toArray());
+        return new ConditionReviewListResponse(items);
     }
 }

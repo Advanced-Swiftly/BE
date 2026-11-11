@@ -3,8 +3,12 @@ package com.advancedswiftly.pawfit.admin.api;
 import com.advancedswiftly.pawfit.admin.api.dto.AdminEventListResponse;
 import com.advancedswiftly.pawfit.admin.api.dto.DrawResultResponse;
 import com.advancedswiftly.pawfit.admin.api.dto.EventCreateRequest;
+import com.advancedswiftly.pawfit.admin.api.dto.EventDrawRequest;
+import com.advancedswiftly.pawfit.admin.api.dto.EventDrawResponse;
+import com.advancedswiftly.pawfit.admin.api.dto.EventStatusChangeRequest;
 import com.advancedswiftly.pawfit.admin.api.dto.EventStatusResponse;
 import com.advancedswiftly.pawfit.admin.api.dto.EventUpdateRequest;
+import com.advancedswiftly.pawfit.admin.application.AdminDrawService;
 import com.advancedswiftly.pawfit.admin.application.AdminEventManagementService;
 import com.advancedswiftly.pawfit.event.domain.EventStatus;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,6 +19,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -33,9 +38,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminEventManagementController {
 
     private final AdminEventManagementService eventService;
+    private final AdminDrawService drawService;
 
-    public AdminEventManagementController(AdminEventManagementService eventService) {
+    public AdminEventManagementController(AdminEventManagementService eventService, AdminDrawService drawService) {
         this.eventService = eventService;
+        this.drawService = drawService;
     }
 
     @Operation(summary = "운영자 이벤트 목록 조회", description = "연도·분기·상태로 거르고 최신순으로 20건씩 조회합니다.")
@@ -98,6 +105,43 @@ public class AdminEventManagementController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteEvent(@Parameter(description = "이벤트 ID", example = "801") @PathVariable Long eventId) {
         eventService.delete(eventId);
+    }
+
+    @Operation(
+            summary = "이벤트 상태 변경",
+            description = "DRAFT→OPEN(공개, 지역·경품 필요), OPEN→CLOSED(종료), CLOSED→DRAWN(추첨 완료, 추첨 실행 후에만)만 가능합니다. "
+                    + "그 밖의 전이는 INVALID_STATUS_TRANSITION(409)입니다.")
+    @ApiResponse(responseCode = "200", description = "변경 성공")
+    @ApiResponse(responseCode = "400", description = "요청 값 오류")
+    @ApiResponse(responseCode = "401", description = "인증 필요")
+    @ApiResponse(responseCode = "403", description = "운영자 권한 필요")
+    @ApiResponse(responseCode = "404", description = "존재하지 않는 이벤트")
+    @ApiResponse(responseCode = "409", description = "INVALID_STATUS_TRANSITION")
+    @PatchMapping("/events/{eventId}/status")
+    public EventStatusResponse changeEventStatus(
+            @Parameter(description = "이벤트 ID", example = "801") @PathVariable Long eventId,
+            @Valid @RequestBody EventStatusChangeRequest request) {
+        return eventService.changeStatus(eventId, request.status());
+    }
+
+    @Operation(
+            summary = "이벤트 추첨 실행",
+            description = "종료(CLOSED)된 이벤트에서 한 번만 실행합니다. 필요 스탬프 수를 채운 응모 중 시드로 섞은 순서대로 "
+                    + "순위가 높은 경품부터 수량만큼 당첨자를 확정하고, 나머지 응모는 NOT_SELECTED가 됩니다. "
+                    + "이미 실행했으면 DRAW_ALREADY_EXECUTED(409), 종료 상태가 아니면 INVALID_STATUS_TRANSITION(409)입니다.")
+    @ApiResponse(responseCode = "201", description = "추첨 성공")
+    @ApiResponse(responseCode = "400", description = "confirm이 true가 아님")
+    @ApiResponse(responseCode = "401", description = "인증 필요")
+    @ApiResponse(responseCode = "403", description = "운영자 권한 필요")
+    @ApiResponse(responseCode = "404", description = "존재하지 않는 이벤트")
+    @ApiResponse(responseCode = "409", description = "DRAW_ALREADY_EXECUTED 또는 INVALID_STATUS_TRANSITION")
+    @PostMapping("/events/{eventId}/draw")
+    @ResponseStatus(HttpStatus.CREATED)
+    public EventDrawResponse drawEvent(
+            Authentication authentication,
+            @Parameter(description = "이벤트 ID", example = "801") @PathVariable Long eventId,
+            @Valid @RequestBody EventDrawRequest request) {
+        return drawService.draw(AdminControllerSupport.currentUserId(authentication), eventId, request);
     }
 
     @Operation(summary = "추첨 결과 조회", description = "당첨자와 당첨 취소자를 경품 순위순으로 조회합니다.")

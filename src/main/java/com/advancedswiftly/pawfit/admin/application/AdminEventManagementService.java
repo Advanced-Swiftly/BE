@@ -170,6 +170,42 @@ public class AdminEventManagementService {
         return new EventStatusResponse(eventId, publish ? EventStatus.OPEN.name() : EventStatus.DRAFT.name());
     }
 
+    /**
+     * DRAFT→OPEN(지역·경품 필요), OPEN→CLOSED, CLOSED→DRAWN(추첨 실행 후)만 허용한다.
+     * 그 밖의 전이는 INVALID_STATUS_TRANSITION(409), DRAFT로의 변경은 400.
+     */
+    @Transactional
+    public EventStatusResponse changeStatus(Long eventId, EventStatus target) {
+        if (target == EventStatus.DRAFT) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "DRAFT로는 변경할 수 없습니다.");
+        }
+        List<String> rows = jdbcTemplate.query(
+                "SELECT status FROM stamp_event WHERE event_id = ?", (rs, rowNum) -> rs.getString(1), eventId);
+        if (rows.isEmpty()) {
+            throw new BusinessException(ErrorCode.EVENT_NOT_FOUND);
+        }
+        EventStatus current = EventStatus.valueOf(rows.get(0));
+        boolean allowed = switch (target) {
+            case OPEN -> current == EventStatus.DRAFT;
+            case CLOSED -> current == EventStatus.OPEN;
+            case DRAWN -> current == EventStatus.CLOSED;
+            case DRAFT -> false;
+        };
+        if (!allowed) {
+            throw new BusinessException(ErrorCode.INVALID_STATUS_TRANSITION);
+        }
+        if (target == EventStatus.OPEN
+                && (count("SELECT COUNT(*) FROM event_region WHERE event_id = ?", eventId) == 0
+                        || count("SELECT COUNT(*) FROM event_prize WHERE event_id = ?", eventId) == 0)) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "공개하려면 적용 지역과 경품이 필요합니다.");
+        }
+        if (target == EventStatus.DRAWN && count("SELECT COUNT(*) FROM event_draw WHERE event_id = ?", eventId) == 0) {
+            throw new BusinessException(ErrorCode.INVALID_STATUS_TRANSITION);
+        }
+        jdbcTemplate.update("UPDATE stamp_event SET status = ? WHERE event_id = ?", target.name(), eventId);
+        return new EventStatusResponse(eventId, target.name());
+    }
+
     /** 초안이고 참여 업체·응모가 없을 때만 삭제한다. */
     @Transactional
     public void delete(Long eventId) {

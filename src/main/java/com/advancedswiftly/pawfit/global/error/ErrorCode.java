@@ -42,6 +42,8 @@ public enum ErrorCode {
     NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_002", "요청한 리소스를 찾을 수 없습니다."),
     CONFLICT(HttpStatus.CONFLICT, "COMMON_003", "현재 상태에서는 요청을 처리할 수 없습니다."),
     INVALID_REQUEST_STATE(HttpStatus.BAD_REQUEST, "INVALID_REQUEST_STATE", "요청을 처리할 수 없습니다."),
+    INVALID_STATUS_TRANSITION(HttpStatus.CONFLICT, "INVALID_STATUS_TRANSITION", "요청을 처리할 수 없습니다."),
+    DRAW_ALREADY_EXECUTED(HttpStatus.CONFLICT, "DRAW_ALREADY_EXECUTED", "요청을 처리할 수 없습니다."),
     POLICY_VERSION_CONFLICT(HttpStatus.CONFLICT, "POLICY_VERSION_CONFLICT", "요청을 처리할 수 없습니다."),
     DUPLICATE_APPLICATION(HttpStatus.BAD_REQUEST, "DUPLICATE_APPLICATION", "요청을 처리할 수 없습니다."),
     CANCEL_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "CANCEL_NOT_ALLOWED", "요청을 처리할 수 없습니다."),

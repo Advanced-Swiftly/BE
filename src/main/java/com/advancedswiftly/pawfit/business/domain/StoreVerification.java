@@ -98,6 +98,16 @@ public class StoreVerification extends BaseEntity {
         this.status = VerificationStatus.RECEIVED;
     }
 
+    /** 운영자 심사 결과를 반영한다. comment가 null이면 기존 심사 의견을 유지한다. */
+    public void review(VerificationStatus target, String comment, Long reviewerId) {
+        this.status = target;
+        if (comment != null) {
+            this.reviewNote = comment;
+        }
+        this.reviewedBy = reviewerId;
+        this.reviewedAt = Instant.now();
+    }
+
     public Long getId() {
         return id;
     }
