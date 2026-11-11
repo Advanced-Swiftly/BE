@@ -8,6 +8,7 @@
 - Stateless Spring Security
 - REST API prefix: `/api/v1`
 - 시간 저장: UTC `Instant`
+- Render Spring Boot 서비스 1개에서 보호자·업체·운영자를 모듈과 권한으로 분리
 
 ## 패키지 구조
 
@@ -46,7 +47,8 @@ domain
 2. JPA Entity를 API 응답으로 직접 반환하지 않습니다.
 3. 다른 도메인의 Repository를 직접 호출하지 않고 application service를 경유합니다.
 4. 외부 서비스(Supabase Storage, Gemini, 공공데이터)는 interface와 adapter로 분리합니다.
-5. 스키마 변경은 `ddl-auto`가 아니라 Flyway migration으로만 반영합니다.
+5. ERD 확정 전 초기 개발은 `ddl-auto=update`를 사용합니다. 전체 migration이 준비되면
+   운영 환경을 `validate`로 전환하고 이후 변경은 Flyway로만 반영합니다.
 6. 새 API는 정상·권한·검증 실패 테스트와 OpenAPI 설명을 함께 추가합니다.
 
 ## 데이터베이스 변경

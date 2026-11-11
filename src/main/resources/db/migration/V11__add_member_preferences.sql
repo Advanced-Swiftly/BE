@@ -1,0 +1,6 @@
+ALTER TABLE app_user
+    ADD COLUMN notify_event BOOLEAN NOT NULL DEFAULT TRUE,
+    ADD COLUMN notify_inquiry BOOLEAN NOT NULL DEFAULT TRUE,
+    ADD COLUMN notify_review_result BOOLEAN NOT NULL DEFAULT TRUE,
+    ADD COLUMN notify_marketing BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN withdrawal_reason VARCHAR(500);

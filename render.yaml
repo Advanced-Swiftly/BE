@@ -5,7 +5,7 @@ services:
     plan: free
     region: singapore
     branch: develop
-    autoDeployTrigger: off
+    autoDeployTrigger: checksPass
     healthCheckPath: /actuator/health
     dockerfilePath: ./Dockerfile
     dockerContext: .
@@ -18,15 +18,40 @@ services:
         sync: false
       - key: DB_PASSWORD
         sync: false
+      - key: JPA_DDL_AUTO
+        value: update
       - key: CORS_ALLOWED_ORIGINS
         sync: false
       - key: JWT_SECRET
         generateValue: true
+      # 시연 기간에만 고정 인증번호를 사용합니다. 실제 운영 전 false로 전환합니다.
+      - key: PHONE_VERIFICATION_DEMO_ENABLED
+        value: "true"
+      - key: PHONE_VERIFICATION_DEMO_CODE
+        value: "123456"
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: SUPABASE_STORAGE_BUCKET
         value: pawfit
+      - key: STORAGE_MAX_FILE_SIZE
+        value: "10485760"
+      - key: STORAGE_ALLOWED_CONTENT_TYPES
+        value: image/jpeg,image/png,image/webp,application/pdf
+      - key: STORAGE_SIGNED_URL_TTL
+        value: 5m
+      - key: STORAGE_TIMEOUT
+        value: 10s
+      - key: AI_PROVIDER
+        value: GEMINI
+      - key: AI_TIMEOUT
+        value: 30s
+      - key: AI_MAX_RETRIES
+        value: "2"
+      - key: AI_RETRY_DELAY
+        value: 500ms
       - key: GEMINI_API_KEY
         sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash

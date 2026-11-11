@@ -46,20 +46,31 @@ docker build -t pawfit-api .
 | `DB_USERNAME` | DB 사용자 | 배포 |
 | `DB_PASSWORD` | DB 비밀번호 | 배포 |
 | `CORS_ALLOWED_ORIGINS` | 쉼표 구분 프론트엔드 origin | 배포 |
-| `JWT_SECRET` | JWT 서명 키(인증 구현 시 사용) | 배포 |
+| `JWT_SECRET` | JWT 서명 키(32 byte 이상) | 배포 |
+| `PHONE_VERIFICATION_DEMO_ENABLED` | 시연용 고정 인증번호 사용 여부 | 시연 배포 |
+| `PHONE_VERIFICATION_DEMO_CODE` | 시연용 6자리 인증번호 | 시연 배포 |
 | `SUPABASE_URL` | Supabase 프로젝트 URL | 파일 기능 |
 | `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 Storage 키 | 파일 기능 |
 | `SUPABASE_STORAGE_BUCKET` | Storage bucket 이름 | 파일 기능 |
-| `GEMINI_API_KEY` | OCR·챗봇 API 키 | AI 기능 |
+| `AI_PROVIDER` | 기본 `GEMINI`, 선택 `WORKERS_AI` | AI 기능 |
+| `AI_TIMEOUT`, `AI_MAX_RETRIES` | AI timeout·재시도 | AI 기능 |
+| `GEMINI_API_KEY` | Gemini OCR·챗봇 API 키 | Gemini 선택 시 |
+| `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` | Workers AI 인증 | Workers AI 선택 시 |
+
+운영 배포는 이미지·PDF 이해와 구조화 출력 품질을 위해 `GEMINI`와
+`gemini-3.8-flash`를 사용합니다. Workers AI 구현은 대체 provider로 유지합니다.
 
 실제 비밀값은 Git이나 설정 파일에 커밋하지 않습니다.
+현재 시연 배포는 휴대전화 인증번호를 `123456`으로 고정합니다. 실제 운영으로 전환할
+때는 `PHONE_VERIFICATION_DEMO_ENABLED=false`로 변경하고 SMS provider를 연결해야 합니다.
 
 ## 문서
 
-- [담당 API 9개 도메인·51개 목록](docs/API_SCOPE.md)
+- [Notion 기준 115개 API 범위](docs/API_SCOPE.md)
 - [아키텍처와 패키지 규칙](docs/ARCHITECTURE.md)
 - [권장 구현 순서](docs/IMPLEMENTATION_PLAN.md)
 - [Supabase·Render·GitHub Actions 배포](docs/DEPLOYMENT.md)
+- [AI·Storage 정책과 실패 처리](docs/AI_AND_STORAGE.md)
 - [Render·Supabase 배포 준비 단계](배포준비단계.md)
 - [Notion API 명세서](https://app.notion.com/p/40e938594612806594b7cf3ffb1f1cc8)
 

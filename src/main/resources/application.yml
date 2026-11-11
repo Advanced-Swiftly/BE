@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 31MB
   application:
     name: pawfit-api
   profiles:
@@ -45,8 +49,42 @@ springdoc:
     tags-sorter: alpha
 
 pawfit:
+  places:
+    data-go-kr-service-key: ${DATA_GO_KR_SERVICE_KEY:}
+  auth:
+    jwt-secret: ${JWT_SECRET:pawfit-local-jwt-secret-change-before-production-2026}
+    access-token-ttl: ${AUTH_ACCESS_TOKEN_TTL:30m}
+    refresh-token-ttl: ${AUTH_REFRESH_TOKEN_TTL:30d}
+    verification-code-ttl: ${PHONE_VERIFICATION_CODE_TTL:3m}
+    verification-token-ttl: ${PHONE_VERIFICATION_TOKEN_TTL:10m}
+    verification-resend-cooldown: ${PHONE_VERIFICATION_RESEND_COOLDOWN:1m}
+    verification-hourly-limit: ${PHONE_VERIFICATION_HOURLY_LIMIT:5}
+    verification-max-attempts: ${PHONE_VERIFICATION_MAX_ATTEMPTS:5}
+    verification-demo-enabled: ${PHONE_VERIFICATION_DEMO_ENABLED:false}
+    verification-demo-code: ${PHONE_VERIFICATION_DEMO_CODE:123456}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+  storage:
+    url: ${SUPABASE_URL:}
+    service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
+    bucket: ${SUPABASE_STORAGE_BUCKET:pawfit}
+    max-file-size: ${STORAGE_MAX_FILE_SIZE:10485760}
+    allowed-content-types: ${STORAGE_ALLOWED_CONTENT_TYPES:image/jpeg,image/png,image/webp,application/pdf}
+    signed-url-ttl: ${STORAGE_SIGNED_URL_TTL:5m}
+    timeout: ${STORAGE_TIMEOUT:10s}
+  ai:
+    provider: ${AI_PROVIDER:GEMINI}
+    timeout: ${AI_TIMEOUT:30s}
+    max-retries: ${AI_MAX_RETRIES:2}
+    retry-delay: ${AI_RETRY_DELAY:500ms}
+    gemini:
+      api-key: ${GEMINI_API_KEY:}
+      model: ${GEMINI_MODEL:gemini-3.8-flash}
+    workers-ai:
+      account-id: ${CLOUDFLARE_ACCOUNT_ID:}
+      api-token: ${CLOUDFLARE_API_TOKEN:}
+      text-model: ${CLOUDFLARE_TEXT_MODEL:@cf/meta/llama-3.1-8b-instruct}
+      vision-model: ${CLOUDFLARE_VISION_MODEL:@cf/meta/llama-3.2-11b-vision-instruct}
 
 logging:
   pattern:
