@@ -34,6 +34,14 @@ public class StorePolicy extends BaseEntity {
     @Column(name = "source_text", length = 2000)
     private String sourceText;
 
+    /** 변경 주체(예: OPERATOR). 이력이 기록되기 전의 정책은 비어 있다. */
+    @Column(name = "changed_by", length = 20)
+    private String changedBy;
+
+    /** 이 정책을 만든 조건 변경 요청. */
+    @Column(name = "request_id")
+    private Long requestId;
+
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "store_policy_rule", joinColumns = @JoinColumn(name = "policy_id"))
     private List<PolicyRule> rules = new ArrayList<>();
@@ -50,6 +58,23 @@ public class StorePolicy extends BaseEntity {
 
     public static StorePolicy create(Long storeId, int version, String sourceText, List<PolicyRule> rules) {
         return new StorePolicy(storeId, version, sourceText, rules);
+    }
+
+    /** 조건 변경 요청이 승인되어 만들어진 정책. */
+    public static StorePolicy createFromRequest(
+            Long storeId, int version, String sourceText, List<PolicyRule> rules, String changedBy, Long requestId) {
+        StorePolicy policy = new StorePolicy(storeId, version, sourceText, rules);
+        policy.changedBy = changedBy;
+        policy.requestId = requestId;
+        return policy;
+    }
+
+    public String getChangedBy() {
+        return changedBy;
+    }
+
+    public Long getRequestId() {
+        return requestId;
     }
 
     public Long getId() {
