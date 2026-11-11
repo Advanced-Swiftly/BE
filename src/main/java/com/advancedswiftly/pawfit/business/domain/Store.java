@@ -63,6 +63,26 @@ public class Store extends BaseEntity {
         return new Store(name, phone, address, latitude, longitude, StoreVerificationStatus.PENDING);
     }
 
+    /** 보완 제출 시 값이 전달된 항목만 수정한다. */
+    public void update(
+            String name, String phone, String address, BigDecimal latitude, BigDecimal longitude) {
+        if (name != null) {
+            this.name = name;
+        }
+        if (phone != null) {
+            this.phone = phone;
+        }
+        if (address != null) {
+            this.address = address;
+        }
+        if (latitude != null) {
+            this.latitude = latitude;
+        }
+        if (longitude != null) {
+            this.longitude = longitude;
+        }
+    }
+
     public Long getId() {
         return id;
     }

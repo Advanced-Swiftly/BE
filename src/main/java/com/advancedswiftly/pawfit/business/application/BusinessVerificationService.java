@@ -1,10 +1,12 @@
 package com.advancedswiftly.pawfit.business.application;
 
 import com.advancedswiftly.pawfit.business.api.dto.StoreRequest;
+import com.advancedswiftly.pawfit.business.api.dto.StoreUpdateRequest;
 import com.advancedswiftly.pawfit.business.api.dto.VerificationCreateRequest;
 import com.advancedswiftly.pawfit.business.api.dto.VerificationCreateResponse;
 import com.advancedswiftly.pawfit.business.api.dto.VerificationListItem;
 import com.advancedswiftly.pawfit.business.api.dto.VerificationListResponse;
+import com.advancedswiftly.pawfit.business.api.dto.VerificationResubmitRequest;
 import com.advancedswiftly.pawfit.business.domain.Store;
 import com.advancedswiftly.pawfit.business.domain.StoreVerification;
 import com.advancedswiftly.pawfit.business.domain.VerificationStatus;
@@ -75,6 +77,35 @@ public class BusinessVerificationService {
 
         return new VerificationListResponse(
                 verifications.stream().map(VerificationListItem::from).toList());
+    }
+
+    /**
+     * 보완 요청을 받은 본인의 인증 건을 재제출한다.
+     * 존재하지 않거나 본인 건이 아니면 404, 보완 요청 상태가 아니면 RESUBMIT_NOT_ALLOWED로 응답한다.
+     */
+    @Transactional
+    public VerificationCreateResponse resubmit(
+            Long userId, Long verificationId, VerificationResubmitRequest request) {
+        StoreVerification verification = verificationRepository
+                .findByIdAndSubmittedBy(verificationId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        if (!verification.canResubmit()) {
+            throw new BusinessException(ErrorCode.RESUBMIT_NOT_ALLOWED);
+        }
+
+        StoreUpdateRequest storeRequest = request.store();
+        if (storeRequest != null) {
+            verification.getStore().update(
+                    storeRequest.name(),
+                    storeRequest.phone(),
+                    storeRequest.address(),
+                    storeRequest.latitude(),
+                    storeRequest.longitude());
+        }
+        verification.resubmit(request.documentUrl());
+
+        return VerificationCreateResponse.from(verification);
     }
 
     private String normalizeBusinessNumber(String businessNumber) {
