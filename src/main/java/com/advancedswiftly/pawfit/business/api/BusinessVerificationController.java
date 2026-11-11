@@ -2,10 +2,14 @@ package com.advancedswiftly.pawfit.business.api;
 
 import com.advancedswiftly.pawfit.business.api.dto.VerificationCreateRequest;
 import com.advancedswiftly.pawfit.business.api.dto.VerificationCreateResponse;
+import com.advancedswiftly.pawfit.business.api.dto.VerificationListResponse;
 import com.advancedswiftly.pawfit.business.application.BusinessVerificationService;
+import com.advancedswiftly.pawfit.business.domain.VerificationStatus;
 import com.advancedswiftly.pawfit.global.error.BusinessException;
 import com.advancedswiftly.pawfit.global.error.ErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -13,9 +17,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "업체 인증", description = "업체 관리자의 사업자 인증 요청·조회·보완")
@@ -44,6 +51,44 @@ public class BusinessVerificationController {
         VerificationCreateResponse response =
                 verificationService.requestVerification(currentUserId(authentication), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @Operation(
+            summary = "내 사업자 인증 목록 조회",
+            description = "업체관리자가 제출한 사업자 인증 요청과 상태를 최신순으로 조회합니다. "
+                    + "status를 주면 해당 심사 상태의 요청만 반환합니다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
+    @ApiResponse(responseCode = "400", description = "허용되지 않는 status 값")
+    @ApiResponse(responseCode = "401", description = "인증 필요")
+    @ApiResponse(responseCode = "403", description = "업체 관리자 권한 필요")
+    @PreAuthorize("hasRole('BUSINESS')")
+    @GetMapping
+    public VerificationListResponse getMyVerifications(
+            Authentication authentication,
+            @Parameter(
+                    description = "심사 상태 필터",
+                    schema = @Schema(
+                            type = "string",
+                            allowableValues = {
+                                "RECEIVED", "IN_REVIEW", "NEEDS_SUPPLEMENT", "APPROVED", "REJECTED"
+                            }))
+            @RequestParam(required = false) String status) {
+        return verificationService.getMyVerifications(
+                currentUserId(authentication), parseStatus(status));
+    }
+
+    /** status 파라미터가 비어 있으면 필터 없음, 허용되지 않는 값이면 400으로 응답한다. */
+    private VerificationStatus parseStatus(String status) {
+        if (!StringUtils.hasText(status)) {
+            return null;
+        }
+        try {
+            return VerificationStatus.valueOf(status.trim());
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "status 값이 올바르지 않습니다. (RECEIVED, IN_REVIEW, NEEDS_SUPPLEMENT, APPROVED, REJECTED)");
+        }
     }
 
     /** 인증 필터가 Authentication의 name에 user_id를 담는다고 가정한다. */
