@@ -87,6 +87,17 @@ public class StoreVerification extends BaseEntity {
                 store, submittedBy, businessNumber, businessName, representativeName, documentUrl);
     }
 
+    /** 보완 요청(NEEDS_SUPPLEMENT)을 받은 건만 재제출할 수 있다. */
+    public boolean canResubmit() {
+        return status == VerificationStatus.NEEDS_SUPPLEMENT;
+    }
+
+    /** 새 사업자등록증으로 교체하고 다시 심사 대기(RECEIVED) 상태로 돌린다. */
+    public void resubmit(String documentUrl) {
+        this.documentUrl = documentUrl;
+        this.status = VerificationStatus.RECEIVED;
+    }
+
     public Long getId() {
         return id;
     }

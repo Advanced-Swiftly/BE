@@ -3,6 +3,7 @@ package com.advancedswiftly.pawfit.business.api;
 import com.advancedswiftly.pawfit.business.api.dto.VerificationCreateRequest;
 import com.advancedswiftly.pawfit.business.api.dto.VerificationCreateResponse;
 import com.advancedswiftly.pawfit.business.api.dto.VerificationListResponse;
+import com.advancedswiftly.pawfit.business.api.dto.VerificationResubmitRequest;
 import com.advancedswiftly.pawfit.business.application.BusinessVerificationService;
 import com.advancedswiftly.pawfit.business.domain.VerificationStatus;
 import com.advancedswiftly.pawfit.global.error.BusinessException;
@@ -19,6 +20,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -75,6 +77,25 @@ public class BusinessVerificationController {
             @RequestParam(required = false) String status) {
         return verificationService.getMyVerifications(
                 currentUserId(authentication), parseStatus(status));
+    }
+
+    @Operation(
+            summary = "사업자 인증 보완 제출",
+            description = "보완 요청(NEEDS_SUPPLEMENT)을 받은 본인의 인증 건에 새 사업자등록증과 "
+                    + "수정한 업체 정보를 다시 제출합니다. 제출하면 상태가 RECEIVED로 돌아가 다시 심사됩니다. "
+                    + "store는 전달한 항목만 수정합니다.")
+    @ApiResponse(responseCode = "200", description = "재제출 접수")
+    @ApiResponse(responseCode = "400", description = "요청 값 오류 또는 RESUBMIT_NOT_ALLOWED(보완 요청 상태가 아님)")
+    @ApiResponse(responseCode = "401", description = "인증 필요")
+    @ApiResponse(responseCode = "403", description = "업체 관리자 권한 필요")
+    @ApiResponse(responseCode = "404", description = "존재하지 않거나 본인의 인증 건이 아님")
+    @PreAuthorize("hasRole('BUSINESS')")
+    @PostMapping("/{verificationId}/resubmit")
+    public VerificationCreateResponse resubmit(
+            Authentication authentication,
+            @Parameter(description = "사업자 인증 ID", example = "1101") @PathVariable Long verificationId,
+            @Valid @RequestBody VerificationResubmitRequest request) {
+        return verificationService.resubmit(currentUserId(authentication), verificationId, request);
     }
 
     /** status 파라미터가 비어 있으면 필터 없음, 허용되지 않는 값이면 400으로 응답한다. */
