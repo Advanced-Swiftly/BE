@@ -81,13 +81,14 @@ class BusinessVerificationDetailControllerTest {
 
     @Test
     @WithMockUser(username = "1", roles = "BUSINESS")
-    void reviewCommentIsNullBeforeReview() throws Exception {
+    void omitsReviewCommentBeforeReview() throws Exception {
         StoreVerification verification = saveVerification(1L);
 
         mockMvc.perform(get(url(verification.getId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("RECEIVED"))
-                .andExpect(jsonPath("$.reviewComment").isEmpty());
+                // 전역 설정(default-property-inclusion: non_null)에 따라 값이 없으면 필드가 응답에서 빠진다.
+                .andExpect(jsonPath("$.reviewComment").doesNotExist());
     }
 
     @Test

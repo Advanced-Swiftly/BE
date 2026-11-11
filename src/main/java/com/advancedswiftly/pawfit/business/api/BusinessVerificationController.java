@@ -83,7 +83,7 @@ public class BusinessVerificationController {
     @Operation(
             summary = "사업자 인증 상세 조회",
             description = "본인이 제출한 사업자 인증 건의 처리 상태와 심사 의견(보완 요청·승인·반려 사유)을 조회합니다. "
-                    + "심사 전에는 reviewComment가 null입니다.")
+                    + "심사 전에는 reviewComment 필드가 응답에서 빠집니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공")
     @ApiResponse(responseCode = "400", description = "요청 값 오류")
     @ApiResponse(responseCode = "401", description = "인증 필요")

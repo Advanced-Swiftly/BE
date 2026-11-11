@@ -9,7 +9,7 @@ public record VerificationDetailResponse(
         @Schema(description = "인증 요청 ID", example = "1101") Long verificationId,
         @Schema(description = "처리 상태", example = "NEEDS_SUPPLEMENT") VerificationStatus status,
         @Schema(
-                description = "심사 의견(보완 요청·승인·반려 사유). 심사 전이면 null",
+                description = "심사 의견(보완 요청·승인·반려 사유). 심사 전이면 필드가 응답에서 빠집니다",
                 example = "등록증 식별이 어렵습니다.",
                 nullable = true)
         String reviewComment) {
