@@ -43,6 +43,10 @@ public class Store extends BaseEntity {
     @Column(name = "longitude", nullable = false, precision = 10, scale = 7)
     private BigDecimal longitude;
 
+    /** 업체가 속한 지역. 사업자 인증 요청 시점에는 비어 있고, 이후 운영자 심사 등에서 채워진다. */
+    @Column(name = "region_id")
+    private Long regionId;
+
     @Column(name = "description", length = 1000)
     private String description;
 
@@ -119,6 +123,10 @@ public class Store extends BaseEntity {
 
     public Long getId() {
         return id;
+    }
+
+    public Long getRegionId() {
+        return regionId;
     }
 
     public String getDescription() {

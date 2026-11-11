@@ -1,14 +1,20 @@
 package com.advancedswiftly.pawfit.business.application;
 
+import com.advancedswiftly.pawfit.business.api.dto.ConditionRequestActionRequest;
 import com.advancedswiftly.pawfit.business.api.dto.ConditionRequestCreateRequest;
+import com.advancedswiftly.pawfit.business.api.dto.ConditionRequestListItem;
+import com.advancedswiftly.pawfit.business.api.dto.ConditionRequestListResponse;
 import com.advancedswiftly.pawfit.business.api.dto.ConditionRequestDetailResponse;
 import com.advancedswiftly.pawfit.business.api.dto.ConditionRequestResultResponse;
 import com.advancedswiftly.pawfit.business.domain.ConditionRequest;
+import com.advancedswiftly.pawfit.business.domain.ConditionRequestStatus;
 import com.advancedswiftly.pawfit.business.infrastructure.ConditionRequestRepository;
 import com.advancedswiftly.pawfit.business.infrastructure.StorePolicyRepository;
 import com.advancedswiftly.pawfit.global.error.BusinessException;
 import com.advancedswiftly.pawfit.global.error.ErrorCode;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,5 +69,46 @@ public class ConditionRequestService {
                 .findByIdAndSubmittedBy(requestId, userId)
                 .map(ConditionRequestDetailResponse::from)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+    }
+
+    public static final int PAGE_SIZE = 20;
+
+    /** 업체의 요청 목록. 최신순이며 page는 1부터 시작한다. */
+    @Transactional(readOnly = true)
+    public ConditionRequestListResponse list(
+            Long userId, Long storeId, ConditionRequestStatus status, int page) {
+        managedStoreChecker.requireManagedStore(userId, storeId);
+        PageRequest pageable = PageRequest.of(page - 1, PAGE_SIZE);
+        Page<ConditionRequest> result = status == null
+                ? requestRepository.findByStoreIdOrderByIdDesc(storeId, pageable)
+                : requestRepository.findByStoreIdAndStatusOrderByIdDesc(storeId, status, pageable);
+        return new ConditionRequestListResponse(
+                result.getContent().stream().map(ConditionRequestListItem::from).toList());
+    }
+
+    /** 본인 요청을 취소하거나 보완해 다시 제출한다. 없거나 본인 요청이 아니면 404, 상태가 맞지 않으면 400. */
+    @Transactional
+    public ConditionRequestResultResponse act(Long userId, Long requestId, ConditionRequestActionRequest request) {
+        ConditionRequest conditionRequest = requestRepository
+                .findByIdAndSubmittedBy(requestId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        switch (request.action()) {
+            case CANCEL -> {
+                if (!conditionRequest.canCancel()) {
+                    throw new BusinessException(ErrorCode.INVALID_REQUEST_STATE, "취소할 수 없는 상태입니다.");
+                }
+                conditionRequest.cancel();
+            }
+            case RESUBMIT -> {
+                if (!conditionRequest.canResubmit()) {
+                    throw new BusinessException(ErrorCode.INVALID_REQUEST_STATE, "보완 요청된 건만 다시 제출할 수 있습니다.");
+                }
+                conditionRequest.resubmit(
+                        request.requestedPolicy() == null ? null : request.requestedPolicy().toRules(),
+                        request.sourceText(),
+                        request.evidenceUrls());
+            }
+        }
+        return ConditionRequestResultResponse.from(conditionRequest);
     }
 }
