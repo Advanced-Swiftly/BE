@@ -50,4 +50,29 @@ public class EventStoreSynchronizer {
     public void syncRevoked(Long storeId, boolean revoked) {
         jdbcTemplate.update("UPDATE event_store SET qr_revoked = ? WHERE store_id = ?", revoked, storeId);
     }
+
+    /**
+     * 이벤트 참여가 승인된 업체를 해당 이벤트의 event_store로 맞춘다.
+     * 이미 행이 있으면 이름·QR 값만 갱신하고, 없으면 새로 만든다. 이벤트가 없으면 건너뛴다.
+     */
+    public void syncApproved(Store store, Long eventId, Long regionId, String qrTokenHash, boolean qrRevoked) {
+        int updated = jdbcTemplate.update(
+                "UPDATE event_store SET name = ?, qr_token_hash = ?, qr_revoked = ?, approved = TRUE WHERE store_id = ?",
+                store.getName(), qrTokenHash, qrRevoked, store.getId());
+        if (updated > 0 || regionId == null) {
+            return;
+        }
+        List<Date> endDates = jdbcTemplate.query(
+                "SELECT ends_on FROM stamp_event WHERE event_id = ?", (rs, rowNum) -> rs.getDate(1), eventId);
+        if (endDates.isEmpty()) {
+            return;
+        }
+        LocalDate endsOn = endDates.get(0).toLocalDate();
+        jdbcTemplate.update(
+                "INSERT INTO event_store (store_id, event_id, region_id, name, latitude, longitude, approved, "
+                        + "qr_token_hash, qr_expires_at, qr_revoked) VALUES (?, ?, ?, ?, ?, ?, TRUE, ?, ?, ?)",
+                store.getId(), eventId, regionId, store.getName(), store.getLatitude(), store.getLongitude(),
+                qrTokenHash, java.sql.Timestamp.from(endsOn.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant()),
+                qrRevoked);
+    }
 }

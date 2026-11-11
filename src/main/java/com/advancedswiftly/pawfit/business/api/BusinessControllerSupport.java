@@ -33,7 +33,7 @@ final class BusinessControllerSupport {
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(
                     ErrorCode.INVALID_REQUEST,
-                    "status 값이 올바르지 않습니다. (RECEIVED, IN_REVIEW, APPROVED, REJECTED, CANCELED)");
+                    "status 값이 올바르지 않습니다. (RECEIVED, IN_REVIEW, NEEDS_INFO, APPROVED, REJECTED, CANCELED)");
         }
     }
 

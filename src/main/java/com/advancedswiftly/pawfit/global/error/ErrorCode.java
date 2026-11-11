@@ -31,6 +31,7 @@ public enum ErrorCode {
     INVALID_OR_REVOKED_QR(HttpStatus.BAD_REQUEST, "INVALID_OR_REVOKED_QR", "요청을 처리할 수 없습니다."),
     INSUFFICIENT_STAMPS(HttpStatus.BAD_REQUEST, "INSUFFICIENT_STAMPS", "요청을 처리할 수 없습니다."),
     DRAW_ENTRY_ALREADY_EXISTS(HttpStatus.CONFLICT, "DRAW_ENTRY_ALREADY_EXISTS", "요청을 처리할 수 없습니다."),
+    INQUIRY_ALREADY_ANSWERED(HttpStatus.CONFLICT, "INQUIRY_ALREADY_ANSWERED", "요청을 처리할 수 없습니다."),
     INQUIRY_NOT_FOUND(HttpStatus.NOT_FOUND, "INQUIRY_NOT_FOUND", "요청을 처리할 수 없습니다."),
     INVALID_DOCUMENT_FORMAT(HttpStatus.BAD_REQUEST, "INVALID_DOCUMENT_FORMAT", "요청을 처리할 수 없습니다."),
     RESUBMIT_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "RESUBMIT_NOT_ALLOWED", "요청을 처리할 수 없습니다."),
