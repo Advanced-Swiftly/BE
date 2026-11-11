@@ -1,15 +1,23 @@
 package com.advancedswiftly.pawfit.business.domain;
 
 import com.advancedswiftly.pawfit.global.common.BaseEntity;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "store")
@@ -34,6 +42,14 @@ public class Store extends BaseEntity {
 
     @Column(name = "longitude", nullable = false, precision = 10, scale = 7)
     private BigDecimal longitude;
+
+    @Column(name = "description", length = 1000)
+    private String description;
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "store_amenity", joinColumns = @JoinColumn(name = "store_id"))
+    @Column(name = "amenity_code", nullable = false, length = 50)
+    private Set<String> amenities = new LinkedHashSet<>();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "verification_status", nullable = false, length = 20)
@@ -83,8 +99,34 @@ public class Store extends BaseEntity {
         }
     }
 
+    /** 업체 운영 화면에서 즉시 수정할 수 있는 정보. 값이 전달된 항목만 수정한다. */
+    public void updateProfile(String name, String phone, String description) {
+        if (name != null) {
+            this.name = name;
+        }
+        if (phone != null) {
+            this.phone = phone;
+        }
+        if (description != null) {
+            this.description = description;
+        }
+    }
+
+    public void replaceAmenities(Collection<String> codes) {
+        this.amenities.clear();
+        this.amenities.addAll(codes);
+    }
+
     public Long getId() {
         return id;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public Set<String> getAmenities() {
+        return Collections.unmodifiableSet(amenities);
     }
 
     public String getName() {

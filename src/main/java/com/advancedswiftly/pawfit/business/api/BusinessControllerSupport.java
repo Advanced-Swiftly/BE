@@ -3,6 +3,8 @@ package com.advancedswiftly.pawfit.business.api;
 import com.advancedswiftly.pawfit.business.domain.ApplicationStatus;
 import com.advancedswiftly.pawfit.global.error.BusinessException;
 import com.advancedswiftly.pawfit.global.error.ErrorCode;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import org.springframework.security.core.Authentication;
 import org.springframework.util.StringUtils;
 
@@ -32,6 +34,30 @@ final class BusinessControllerSupport {
             throw new BusinessException(
                     ErrorCode.INVALID_REQUEST,
                     "status 값이 올바르지 않습니다. (RECEIVED, IN_REVIEW, APPROVED, REJECTED, CANCELED)");
+        }
+    }
+
+    /** 필수 날짜 쿼리 파라미터(yyyy-MM-dd)를 읽는다. 없거나 형식이 틀리면 400. */
+    static LocalDate requireDate(String name, String value) {
+        if (!StringUtils.hasText(value)) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, name + "은(는) 필수입니다. (yyyy-MM-dd)");
+        }
+        try {
+            return LocalDate.parse(value.trim());
+        } catch (DateTimeParseException exception) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, name + " 형식이 올바르지 않습니다. (yyyy-MM-dd)");
+        }
+    }
+
+    /** 필수 숫자 쿼리 파라미터를 읽는다. 없거나 숫자가 아니면 400. */
+    static Long requireLong(String name, String value) {
+        if (!StringUtils.hasText(value)) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, name + "은(는) 필수입니다.");
+        }
+        try {
+            return Long.valueOf(value.trim());
+        } catch (NumberFormatException exception) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, name + " 형식이 올바르지 않습니다.");
         }
     }
 }
