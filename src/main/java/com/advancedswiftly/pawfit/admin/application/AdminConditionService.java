@@ -9,6 +9,7 @@ import com.advancedswiftly.pawfit.admin.api.dto.PolicyChangeRequest;
 import com.advancedswiftly.pawfit.admin.api.dto.PolicyChangeResponse;
 import com.advancedswiftly.pawfit.business.api.dto.StorePolicyResponse;
 import com.advancedswiftly.pawfit.business.domain.ConditionRequest;
+import com.advancedswiftly.pawfit.business.domain.ConditionRequestKind;
 import com.advancedswiftly.pawfit.business.domain.ConditionRequestStatus;
 import com.advancedswiftly.pawfit.business.domain.PolicyRule;
 import com.advancedswiftly.pawfit.business.domain.ReviewAction;
@@ -79,6 +80,9 @@ public class AdminConditionService {
         }
         Integer appliedVersion = null;
         if (action == ReviewAction.APPROVE) {
+            if (request.getKind() == ConditionRequestKind.RECHECK && body.approvedPolicy() == null) {
+                throw new BusinessException(ErrorCode.INVALID_REQUEST, "재검토 요청은 적용할 정책을 함께 보내야 승인할 수 있습니다.");
+            }
             int currentVersion = currentVersion(request.getStoreId());
             if (request.getBaseVersion() != currentVersion) {
                 throw new BusinessException(ErrorCode.POLICY_VERSION_CONFLICT);

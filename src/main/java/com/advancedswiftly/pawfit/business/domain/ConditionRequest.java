@@ -113,6 +113,13 @@ public class ConditionRequest extends BaseEntity {
         return request;
     }
 
+    /** 운영자가 업체 정책의 재검토를 요청한 기록. 요청한 정책 없이 사유만 원문에 담는다. */
+    public static ConditionRequest recheck(Long storeId, int baseVersion, String reason, Long operatorId) {
+        ConditionRequest request = new ConditionRequest(storeId, baseVersion, reason, operatorId, List.of(), List.of());
+        request.kind = ConditionRequestKind.RECHECK;
+        return request;
+    }
+
     /** 운영자 심사 결과를 반영한다. note가 null이면 기존 심사 의견을 유지한다. */
     public void review(ConditionRequestStatus target, String note, Long reviewerId) {
         this.status = target;
