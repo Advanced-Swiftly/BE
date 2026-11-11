@@ -4,6 +4,7 @@ import com.advancedswiftly.pawfit.business.api.dto.StoreRequest;
 import com.advancedswiftly.pawfit.business.api.dto.StoreUpdateRequest;
 import com.advancedswiftly.pawfit.business.api.dto.VerificationCreateRequest;
 import com.advancedswiftly.pawfit.business.api.dto.VerificationCreateResponse;
+import com.advancedswiftly.pawfit.business.api.dto.VerificationDetailResponse;
 import com.advancedswiftly.pawfit.business.api.dto.VerificationListItem;
 import com.advancedswiftly.pawfit.business.api.dto.VerificationListResponse;
 import com.advancedswiftly.pawfit.business.api.dto.VerificationResubmitRequest;
@@ -77,6 +78,15 @@ public class BusinessVerificationService {
 
         return new VerificationListResponse(
                 verifications.stream().map(VerificationListItem::from).toList());
+    }
+
+    /** 본인이 제출한 인증 요청의 상태와 심사 의견을 조회한다. 없거나 본인 건이 아니면 404. */
+    @Transactional(readOnly = true)
+    public VerificationDetailResponse getMyVerification(Long userId, Long verificationId) {
+        StoreVerification verification = verificationRepository
+                .findByIdAndSubmittedBy(verificationId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        return VerificationDetailResponse.from(verification);
     }
 
     /**
