@@ -30,14 +30,17 @@ public class EventApplicationService {
     private final EventApplicationRepository applicationRepository;
     private final StampEventRepository eventRepository;
     private final ManagedStoreChecker managedStoreChecker;
+    private final EventEligibilityService eligibility;
 
     public EventApplicationService(
             EventApplicationRepository applicationRepository,
             StampEventRepository eventRepository,
-            ManagedStoreChecker managedStoreChecker) {
+            ManagedStoreChecker managedStoreChecker,
+            EventEligibilityService eligibility) {
         this.applicationRepository = applicationRepository;
         this.eventRepository = eventRepository;
         this.managedStoreChecker = managedStoreChecker;
+        this.eligibility = eligibility;
     }
 
     @Transactional
@@ -59,6 +62,10 @@ public class EventApplicationService {
         if (applicationRepository.existsByStoreIdAndEventIdAndStatusNotIn(
                 request.storeId(), request.eventId(), REAPPLY_ALLOWED)) {
             throw new BusinessException(ErrorCode.DUPLICATE_APPLICATION);
+        }
+
+        if (!eligibility.get(userId, request.eventId(), request.storeId()).canApply()) {
+            throw new BusinessException(ErrorCode.EVENT_NOT_ELIGIBLE);
         }
 
         EventApplication application = EventApplication.receive(

@@ -12,11 +12,19 @@ import com.advancedswiftly.pawfit.business.domain.ApplicationStatus;
 import com.advancedswiftly.pawfit.business.domain.EventApplication;
 import com.advancedswiftly.pawfit.business.domain.Store;
 import com.advancedswiftly.pawfit.business.domain.StoreVerification;
+import com.advancedswiftly.pawfit.business.domain.StoreVerificationStatus;
+import com.advancedswiftly.pawfit.business.domain.StorePolicy;
+import com.advancedswiftly.pawfit.business.domain.StoreQr;
+import com.advancedswiftly.pawfit.business.infrastructure.StorePolicyRepository;
+import com.advancedswiftly.pawfit.business.infrastructure.StoreQrRepository;
 import com.advancedswiftly.pawfit.business.infrastructure.EventApplicationRepository;
 import com.advancedswiftly.pawfit.business.infrastructure.StoreRepository;
 import com.advancedswiftly.pawfit.business.infrastructure.StoreVerificationRepository;
 import java.math.BigDecimal;
 import java.util.Set;
+import java.util.List;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,11 +64,16 @@ class EventApplicationControllerTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired private StorePolicyRepository policies;
+    @Autowired private StoreQrRepository qrs;
+
     @BeforeEach
     void setUp() {
         // @WithMockUser의 로그인 정보를 요청에 전달하려면 springSecurity()를 직접 적용해야 한다.
         mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         applicationRepository.deleteAll();
+        policies.deleteAll();
+        qrs.deleteAll();
         verificationRepository.deleteAll();
         storeRepository.deleteAll();
         jdbcTemplate.update("delete from event_region where event_id in (?, ?)", EVENT_ID, CLOSED_EVENT_ID);
@@ -72,9 +85,9 @@ class EventApplicationControllerTest {
     private void insertEvent(long eventId, String status) {
         jdbcTemplate.update(
                 "insert into stamp_event (event_id, title, event_year, quarter, status, starts_on, ends_on,"
-                        + " required_stamp_count, max_stamp_count) values (?, ?, 2026, 4, ?, '2026-10-01',"
-                        + " '2026-12-31', 2, 10)",
-                eventId, "테스트 이벤트", status);
+                        + " required_stamp_count, max_stamp_count) values (?, ?, 2026, 4, ?, ?, ?, 2, 10)",
+                eventId, "테스트 이벤트", status, LocalDate.now(ZoneId.of("Asia/Seoul")).minusDays(1),
+                LocalDate.now(ZoneId.of("Asia/Seoul")).plusDays(1));
         jdbcTemplate.update("insert into event_region (event_id, region_id) values (?, 11), (?, 41)", eventId, eventId);
     }
 
@@ -86,7 +99,63 @@ class EventApplicationControllerTest {
                 store, userId, String.valueOf(1000000000L + store.getId()), "카페", "홍길동", "https://example.com/doc.pdf"));
         jdbcTemplate.update(
                 "update store_verification set status = 'APPROVED' where verification_id = ?", verification.getId());
+        store.changeVerificationStatus(StoreVerificationStatus.VERIFIED);
+        storeRepository.saveAndFlush(store);
+        jdbcTemplate.update("update store set region_id = 11 where store_id = ?", store.getId());
+        policies.saveAndFlush(StorePolicy.create(store.getId(), 1, "확인된 정책", List.of()));
+        qrs.saveAndFlush(StoreQr.issue(store.getId(), "https://example.com/qr.png", "token",
+                String.format("%064x", store.getId()), null));
         return store.getId();
+    }
+
+    @Test
+    @WithMockUser(username = "1", roles = "BUSINESS")
+    void eligibilityMatchesFrontendContractAndRejectsMissingOrInvalidParameters() throws Exception {
+        Long storeId = saveManagedStore(1L);
+        String path = "/api/v1/business/events/" + EVENT_ID + "/eligibility";
+        mockMvc.perform(get(path).param("placeId", storeId.toString()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.eventId").value(String.valueOf(EVENT_ID)))
+                .andExpect(jsonPath("$.placeId").value(storeId.toString()))
+                .andExpect(jsonPath("$.checks.length()").value(4))
+                .andExpect(jsonPath("$.canApply").value(true));
+        mockMvc.perform(get(path)).andExpect(status().isBadRequest());
+        mockMvc.perform(get(path).param("placeId", "-1")).andExpect(status().isBadRequest());
+        mockMvc.perform(get(path).param("placeId", "bad-id")).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "1", roles = "BUSINESS")
+    void eligibilityDoesNotExposeAnotherManagersStore() throws Exception {
+        Long storeId = saveManagedStore(2L);
+        mockMvc.perform(get("/api/v1/business/events/" + EVENT_ID + "/eligibility").param("placeId", storeId.toString()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "1", roles = "BUSINESS")
+    void applicationRechecksEligibilityInsteadOfTrustingPreflight() throws Exception {
+        Long storeId = saveManagedStore(1L);
+        policies.deleteAll();
+        mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(applyBody(storeId, EVENT_ID, "[11]")))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("EVENT_NOT_ELIGIBLE"));
+        assertThat(applicationRepository.findAll()).isEmpty();
+    }
+
+    @Test
+    void eligibilityRequiresBusinessAuthentication() throws Exception {
+        String path = "/api/v1/business/events/" + EVENT_ID + "/eligibility";
+        mockMvc.perform(get(path).param("placeId", "1")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get(path).param("placeId", "1")
+                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("1").roles("GUARDIAN")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "1", roles = "BUSINESS")
+    void eligibilityRejectsMissingEventForManagedStore() throws Exception {
+        Long storeId = saveManagedStore(1L);
+        mockMvc.perform(get("/api/v1/business/events/999999/eligibility").param("placeId", storeId.toString()))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("EVENT_NOT_FOUND"));
     }
 
     private EventApplication saveApplication(Long userId, Long storeId, String status) {

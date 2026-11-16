@@ -268,4 +268,68 @@ class AdApplicationControllerTest {
         mockMvc.perform(get(URL))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    @WithMockUser(username = "1", roles = "BUSINESS")
+    void updatesPeriodAtFrontendPathAndReturnsPersistedDates() throws Exception {
+        AdApplication application = saveApplication(1L, saveManagedStore(1L), AdType.BANNER, "RECEIVED");
+        mockMvc.perform(patch("/api/v1/business/applications/" + application.getId())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"startDate\":\"2026-12-07\",\"weeks\":2}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.applicationId").value(application.getId().toString()))
+                .andExpect(jsonPath("$.type").value("AD"))
+                .andExpect(jsonPath("$.ad.startDate").value("2026-12-07"))
+                .andExpect(jsonPath("$.ad.endDate").value("2026-12-20"))
+                .andExpect(jsonPath("$.ad.weeks").value(2)).andExpect(jsonPath("$.canEditPeriod").value(true));
+        AdApplication saved = applicationRepository.findById(application.getId()).orElseThrow();
+        assertThat(saved.getEndDate()).isEqualTo(LocalDate.of(2026, 12, 20));
+        mockMvc.perform(get(URL + "/" + application.getId()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.startDate").value("2026-12-07"))
+                .andExpect(jsonPath("$.endDate").value("2026-12-20"));
+    }
+
+    @Test
+    @WithMockUser(username = "1", roles = "BUSINESS")
+    void partialUpdateKeepsExistingDurationOrStartDate() throws Exception {
+        AdApplication application = saveApplication(1L, saveManagedStore(1L), AdType.BANNER, "RECEIVED");
+        mockMvc.perform(patch(URL + "/" + application.getId()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"startDate\":\"2027-01-01\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.applicationId").value(application.getId().intValue()));
+        assertThat(applicationRepository.findById(application.getId()).orElseThrow().getEndDate())
+                .isEqualTo(LocalDate.of(2027, 1, 31));
+        mockMvc.perform(patch("/api/v1/business/applications/" + application.getId())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"weeks\":1}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.ad.startDate").value("2027-01-01"))
+                .andExpect(jsonPath("$.ad.endDate").value("2027-01-07"));
+    }
+
+    @Test
+    @WithMockUser(username = "1", roles = "BUSINESS")
+    void periodChangesRejectReviewedApplicationsOtherOwnersAndMalformedBodies() throws Exception {
+        AdApplication application = saveApplication(1L, saveManagedStore(1L), AdType.BANNER, "IN_REVIEW");
+        String path = "/api/v1/business/applications/" + application.getId();
+        mockMvc.perform(patch(path).contentType(MediaType.APPLICATION_JSON).content("{\"weeks\":2}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("REQUEST_NOT_EDITABLE"));
+        jdbcTemplate.update("update ad_application set status = 'RECEIVED' where application_id = ?", application.getId());
+        for (String body : new String[] {"{}", "{\"weeks\":0}", "{\"weeks\":5}", "{\"weeks\":-1}",
+                "{\"startDate\":\"bad-date\"}", "{\"action\":\"CANCEL\",\"weeks\":2}"}) {
+            mockMvc.perform(patch(path).contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isBadRequest());
+        }
+        AdApplication other = saveApplication(2L, saveManagedStore(2L), AdType.BANNER, "RECEIVED");
+        mockMvc.perform(patch("/api/v1/business/applications/" + other.getId())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"weeks\":2}"))
+                .andExpect(status().isNotFound());
+        assertThat(applicationRepository.findById(application.getId()).orElseThrow().getEndDate())
+                .isEqualTo(LocalDate.of(2026, 12, 31));
+    }
+
+    @Test
+    void periodUpdateRequiresBusinessAuthentication() throws Exception {
+        String path = "/api/v1/business/applications/1";
+        mockMvc.perform(patch(path).contentType(MediaType.APPLICATION_JSON).content("{\"weeks\":2}"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(patch(path).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("1").roles("GUARDIAN"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"weeks\":2}"))
+                .andExpect(status().isForbidden());
+    }
 }

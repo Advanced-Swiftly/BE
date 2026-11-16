@@ -55,7 +55,7 @@ public class AdminApplicationService {
     @Transactional
     public ApplicationReviewResponse reviewAd(Long reviewerId, Long applicationId, ApplicationReviewRequest request) {
         AdApplication application =
-                adRepository.findById(applicationId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+                adRepository.findByIdForUpdate(applicationId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         ReviewAction action = toDomain(request);
         ApplicationStatus target = target(application.getStatus(), action, request.comment());
         application.review(target, comment(request), reviewerId);

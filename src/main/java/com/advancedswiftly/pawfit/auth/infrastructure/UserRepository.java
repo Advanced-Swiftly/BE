@@ -14,6 +14,18 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByPhoneNumber(String phoneNumber);
 
+    Optional<User> findByLoginId(String loginId);
+
+    boolean existsByLoginId(String loginId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select user from User user where user.loginId = :loginId")
+    Optional<User> findByLoginIdForUpdate(@Param("loginId") String loginId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select user from User user where user.phoneNumber = :phoneNumber")
+    Optional<User> findByPhoneNumberForUpdate(@Param("phoneNumber") String phoneNumber);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select user from User user where user.id = :userId")
     Optional<User> findByIdForUpdate(@Param("userId") Long userId);

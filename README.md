@@ -55,6 +55,8 @@ docker build -t pawfit-api .
 | `AI_PROVIDER` | 기본 `GEMINI`, 선택 `WORKERS_AI` | AI 기능 |
 | `AI_TIMEOUT`, `AI_MAX_RETRIES` | AI timeout·재시도 | AI 기능 |
 | `GEMINI_API_KEY` | Gemini OCR·챗봇 API 키 | Gemini 선택 시 |
+| `NTS_BUSINESS_STATUS_SERVICE_KEY` | 국세청 사업자 상태조회 Decoding 인증키 | 사업자 상태조회 |
+| `NTS_BUSINESS_STATUS_TIMEOUT` | 국세청 API timeout(기본 5초) | 사업자 상태조회 |
 | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` | Workers AI 인증 | Workers AI 선택 시 |
 
 운영 배포는 이미지·PDF 이해와 구조화 출력 품질을 위해 `GEMINI`와
@@ -71,6 +73,7 @@ docker build -t pawfit-api .
 - [권장 구현 순서](docs/IMPLEMENTATION_PLAN.md)
 - [Supabase·Render·GitHub Actions 배포](docs/DEPLOYMENT.md)
 - [AI·Storage 정책과 실패 처리](docs/AI_AND_STORAGE.md)
+- [업체 프론트 누락 API 요청·응답과 재연결 가이드](docs/PARTNER_API_INTEGRATION.md)
 - [Render·Supabase 배포 준비 단계](배포준비단계.md)
 - [Notion API 명세서](https://app.notion.com/p/40e938594612806594b7cf3ffb1f1cc8)
 

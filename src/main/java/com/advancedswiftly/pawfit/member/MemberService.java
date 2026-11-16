@@ -1,6 +1,7 @@
 package com.advancedswiftly.pawfit.member;
 
 import com.advancedswiftly.pawfit.auth.application.PhoneVerificationService;
+import com.advancedswiftly.pawfit.auth.application.TokenService;
 import com.advancedswiftly.pawfit.auth.domain.User;
 import com.advancedswiftly.pawfit.auth.infrastructure.UserRepository;
 import com.advancedswiftly.pawfit.global.error.BusinessException;
@@ -17,16 +18,19 @@ class MemberService {
     private final UserRepository users;
     private final PhoneVerificationService phoneVerification;
     private final PasswordEncoder passwords;
+    private final TokenService tokens;
 
-    MemberService(UserRepository users, PhoneVerificationService phoneVerification, PasswordEncoder passwords) {
+    MemberService(UserRepository users, PhoneVerificationService phoneVerification, PasswordEncoder passwords,
+                  TokenService tokens) {
         this.users = users;
         this.phoneVerification = phoneVerification;
         this.passwords = passwords;
+        this.tokens = tokens;
     }
 
     public Profile profile(long id) {
         User user = activeUser(id, false);
-        return new Profile(user.getId(), user.getRole(), user.getName(), user.getPhoneNumber());
+        return new Profile(user.getId(), user.getRole(), user.getName(), user.getPhoneNumber(), user.getLoginId());
     }
 
     @Transactional
@@ -67,6 +71,19 @@ class MemberService {
             throw new BusinessException(ErrorCode.INVALID_PASSWORD);
         }
         user.withdraw(request.reason());
+    }
+
+    @Transactional
+    public void changePassword(long id, PasswordChange request) {
+        User user = activeUser(id, true);
+        if (!passwords.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new BusinessException(ErrorCode.INVALID_PASSWORD);
+        }
+        if (passwords.matches(request.newPassword(), user.getPasswordHash())) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "현재 비밀번호와 다른 비밀번호를 입력해 주세요.");
+        }
+        user.changePassword(passwords.encode(request.newPassword()));
+        tokens.revokeAll(id);
     }
 
     private User activeUser(long id, boolean lock) {

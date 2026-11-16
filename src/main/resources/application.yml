@@ -49,6 +49,9 @@ springdoc:
     tags-sorter: alpha
 
 pawfit:
+  business-status:
+    service-key: ${NTS_BUSINESS_STATUS_SERVICE_KEY:}
+    timeout: ${NTS_BUSINESS_STATUS_TIMEOUT:5s}
   places:
     data-go-kr-service-key: ${DATA_GO_KR_SERVICE_KEY:}
   auth:

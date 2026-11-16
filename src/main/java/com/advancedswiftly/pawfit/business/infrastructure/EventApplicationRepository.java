@@ -9,6 +9,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface EventApplicationRepository extends JpaRepository<EventApplication, Long> {
 
+    Optional<EventApplication> findFirstByStoreIdAndEventIdAndStatusNotInOrderByIdDesc(
+            Long storeId, Long eventId, Collection<ApplicationStatus> statuses);
+
     boolean existsByStoreIdAndEventIdAndStatusNotIn(
             Long storeId, Long eventId, Collection<ApplicationStatus> statuses);
 
