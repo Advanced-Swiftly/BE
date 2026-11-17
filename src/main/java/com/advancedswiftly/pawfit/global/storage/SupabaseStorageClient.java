@@ -2,16 +2,19 @@ package com.advancedswiftly.pawfit.global.storage;
 
 import com.advancedswiftly.pawfit.global.config.PawfitProperties;
 import com.advancedswiftly.pawfit.global.http.ExternalRestClientFactory;
-import com.fasterxml.jackson.databind.JsonNode;
+
+import org.springframework.http.MediaType;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.util.UriUtils;
+
+import tools.jackson.databind.JsonNode;
+
 import java.net.URI;
 import java.time.Duration;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.springframework.http.MediaType;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.util.UriUtils;
 
 public class SupabaseStorageClient implements StorageClient {
 
@@ -27,7 +30,8 @@ public class SupabaseStorageClient implements StorageClient {
     public StoredObject upload(String path, byte[] content, String contentType) {
         ensureConfigured();
         try {
-            restClient.post()
+            restClient
+                    .post()
                     .uri(objectUri(path))
                     .header("apikey", properties.getServiceRoleKey())
                     .header("Authorization", "Bearer " + properties.getServiceRoleKey())
@@ -46,14 +50,16 @@ public class SupabaseStorageClient implements StorageClient {
     public URI createSignedReadUrl(String path, Duration ttl) {
         ensureConfigured();
         try {
-            JsonNode response = restClient.post()
-                    .uri(signUri(path))
-                    .header("apikey", properties.getServiceRoleKey())
-                    .header("Authorization", "Bearer " + properties.getServiceRoleKey())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of("expiresIn", ttl.toSeconds()))
-                    .retrieve()
-                    .body(JsonNode.class);
+            JsonNode response =
+                    restClient
+                            .post()
+                            .uri(signUri(path))
+                            .header("apikey", properties.getServiceRoleKey())
+                            .header("Authorization", "Bearer " + properties.getServiceRoleKey())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(Map.of("expiresIn", ttl.toSeconds()))
+                            .retrieve()
+                            .body(JsonNode.class);
             String signedPath = response == null ? "" : response.path("signedURL").asText("");
             if (signedPath.isBlank() && response != null) {
                 signedPath = response.path("signedUrl").asText("");
@@ -75,7 +81,8 @@ public class SupabaseStorageClient implements StorageClient {
     public void delete(String path) {
         ensureConfigured();
         try {
-            restClient.delete()
+            restClient
+                    .delete()
                     .uri(objectUri(path))
                     .header("apikey", properties.getServiceRoleKey())
                     .header("Authorization", "Bearer " + properties.getServiceRoleKey())
@@ -87,18 +94,29 @@ public class SupabaseStorageClient implements StorageClient {
     }
 
     private URI objectUri(String path) {
-        return URI.create(normalizedBaseUrl() + "/storage/v1/object/" + encodedPath(properties.getBucket())
-                + "/" + encodedPath(path));
+        return URI.create(
+                normalizedBaseUrl()
+                        + "/storage/v1/object/"
+                        + encodedPath(properties.getBucket())
+                        + "/"
+                        + encodedPath(path));
     }
 
     private URI signUri(String path) {
-        return URI.create(normalizedBaseUrl() + "/storage/v1/object/sign/" + encodedPath(properties.getBucket())
-                + "/" + encodedPath(path));
+        return URI.create(
+                normalizedBaseUrl()
+                        + "/storage/v1/object/sign/"
+                        + encodedPath(properties.getBucket())
+                        + "/"
+                        + encodedPath(path));
     }
 
     private String encodedPath(String path) {
         return Stream.of(path.split("/"))
-                .map(segment -> UriUtils.encodePathSegment(segment, java.nio.charset.StandardCharsets.UTF_8))
+                .map(
+                        segment ->
+                                UriUtils.encodePathSegment(
+                                        segment, java.nio.charset.StandardCharsets.UTF_8))
                 .collect(Collectors.joining("/"));
     }
 

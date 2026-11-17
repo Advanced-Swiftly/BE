@@ -2,13 +2,15 @@ package com.advancedswiftly.pawfit.chat;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
-import java.math.BigDecimal;
-import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+import java.util.List;
 
 @Validated
 @RestController
@@ -16,20 +18,25 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/chat/sessions")
 class ChatController {
     private final ChatService chat;
+    private final ChatProfileService profiles;
 
-    ChatController(ChatService chat) {
+    ChatController(ChatService chat, ChatProfileService profiles) {
+        this.profiles = profiles;
         this.chat = chat;
     }
 
     @GetMapping
-    ChatService.Sessions list(Authentication auth, @RequestParam(defaultValue = "0") @Min(0) int page,
+    ChatService.Sessions list(
+            Authentication auth,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         return chat.sessions(userId(auth), page, size);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    ChatService.Created create(Authentication auth, @Valid @RequestBody(required = false) Create request) {
+    ChatService.Created create(
+            Authentication auth, @Valid @RequestBody(required = false) Create request) {
         return chat.create(userId(auth), request == null ? null : request.title());
     }
 
@@ -40,16 +47,28 @@ class ChatController {
     }
 
     @GetMapping("/{sessionId}/messages")
-    ChatService.History history(Authentication auth, @PathVariable @Positive long sessionId,
+    ChatService.History history(
+            Authentication auth,
+            @PathVariable @Positive long sessionId,
             @RequestParam(required = false) @Size(max = 19) String cursor) {
         return chat.history(userId(auth), sessionId, cursor);
     }
 
     @PostMapping("/{sessionId}/messages")
     @ResponseStatus(HttpStatus.CREATED)
-    ChatService.Sent send(Authentication auth, @PathVariable @Positive long sessionId,
+    ChatService.Sent send(
+            Authentication auth,
+            @PathVariable @Positive long sessionId,
             @Valid @RequestBody Send request) {
         return chat.send(auth, userId(auth), sessionId, request);
+    }
+
+    @PostMapping("/{sessionId}/profile-actions/{actionId}/confirm")
+    java.util.Map<String, Object> confirm(
+            Authentication auth,
+            @PathVariable long sessionId,
+            @PathVariable java.util.UUID actionId) {
+        return profiles.confirm(userId(auth), sessionId, actionId);
     }
 
     private long userId(Authentication auth) {
@@ -57,8 +76,10 @@ class ChatController {
     }
 
     record Create(@Size(max = 100) String title) {}
-    record Send(@NotBlank @Size(max = 2000) String content,
-                @Size(max = 5) List<@NotNull @Positive Long> selectedDogIds,
-                @DecimalMin("-90") @DecimalMax("90") BigDecimal latitude,
-                @DecimalMin("-180") @DecimalMax("180") BigDecimal longitude) {}
+
+    record Send(
+            @NotBlank @Size(max = 2000) String content,
+            @Size(max = 5) List<@NotNull @Positive Long> selectedDogIds,
+            @DecimalMin("-90") @DecimalMax("90") BigDecimal latitude,
+            @DecimalMin("-180") @DecimalMax("180") BigDecimal longitude) {}
 }

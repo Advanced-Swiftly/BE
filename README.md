@@ -95,3 +95,8 @@ CodeRabbit Open Source 무료 Review를 사용합니다. GitHub App 권한은 `A
 4. 다른 백엔드 팀원의 승인 후 merge
 
 PR에서는 CI의 `Test and build` 검사를 반드시 통과해야 합니다.
+
+## 시나리오 시연
+
+[시연 초기 상태·구조화 정책·명시적 시드 및 초기화](docs/DEMO_SCENARIO.md)를 참고하세요.
+`python3 scripts/demo_seed.py plan`은 DB에 연결하지 않고 입력 계획을 보여 줍니다.

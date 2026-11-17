@@ -2,6 +2,7 @@ package com.advancedswiftly.pawfit.inquiry.domain;
 
 import com.advancedswiftly.pawfit.auth.domain.User;
 import com.advancedswiftly.pawfit.global.common.BaseEntity;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -16,6 +17,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,6 +26,24 @@ import java.util.List;
 @Entity
 @Table(name = "inquiry")
 public class Inquiry extends BaseEntity {
+    @Column(name = "related_type", length = 20)
+    private String relatedType;
+
+    @Column(name = "related_id")
+    private Long relatedId;
+
+    public String getRelatedType() {
+        return relatedType;
+    }
+
+    public Long getRelatedId() {
+        return relatedId;
+    }
+
+    public void link(String type, Long id) {
+        this.relatedType = type;
+        this.relatedId = id;
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -58,8 +78,7 @@ public class Inquiry extends BaseEntity {
     @OneToMany(mappedBy = "inquiry", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InquiryAttachment> attachments = new ArrayList<>();
 
-    protected Inquiry() {
-    }
+    protected Inquiry() {}
 
     private Inquiry(User user, InquiryCategory category, String title, String content) {
         this.user = user;
@@ -77,8 +96,8 @@ public class Inquiry extends BaseEntity {
             List<String> attachmentUrls) {
         Inquiry inquiry = new Inquiry(user, category, title.trim(), content.trim());
         for (int index = 0; index < attachmentUrls.size(); index++) {
-            inquiry.attachments.add(InquiryAttachment.create(
-                    inquiry, attachmentUrls.get(index), index));
+            inquiry.attachments.add(
+                    InquiryAttachment.create(inquiry, attachmentUrls.get(index), index));
         }
         return inquiry;
     }

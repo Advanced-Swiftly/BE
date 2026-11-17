@@ -1,6 +1,7 @@
 package com.advancedswiftly.pawfit.business.domain;
 
 import com.advancedswiftly.pawfit.global.common.BaseEntity;
+
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -13,6 +14,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -22,6 +24,18 @@ import java.util.List;
 @Entity
 @Table(name = "condition_request")
 public class ConditionRequest extends BaseEntity {
+
+    @jakarta.persistence.Convert(converter = EntryConditionsConverter.class)
+    @Column(name = "conditions_json", length = 8000)
+    private EntryConditions conditions;
+
+    public EntryConditions getConditions() {
+        return conditions;
+    }
+
+    public void setConditions(EntryConditions conditions) {
+        this.conditions = conditions;
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -60,16 +74,19 @@ public class ConditionRequest extends BaseEntity {
     private Instant reviewedAt;
 
     @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(name = "condition_request_rule", joinColumns = @JoinColumn(name = "request_id"))
+    @CollectionTable(
+            name = "condition_request_rule",
+            joinColumns = @JoinColumn(name = "request_id"))
     private List<PolicyRule> requestedRules = new ArrayList<>();
 
     @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(name = "condition_request_evidence", joinColumns = @JoinColumn(name = "request_id"))
+    @CollectionTable(
+            name = "condition_request_evidence",
+            joinColumns = @JoinColumn(name = "request_id"))
     @Column(name = "evidence_url", nullable = false, length = 500)
     private List<String> evidenceUrls = new ArrayList<>();
 
-    protected ConditionRequest() {
-    }
+    protected ConditionRequest() {}
 
     private ConditionRequest(
             Long storeId,
@@ -95,7 +112,8 @@ public class ConditionRequest extends BaseEntity {
             Long submittedBy,
             List<PolicyRule> requestedRules,
             List<String> evidenceUrls) {
-        return new ConditionRequest(storeId, baseVersion, sourceText, submittedBy, requestedRules, evidenceUrls);
+        return new ConditionRequest(
+                storeId, baseVersion, sourceText, submittedBy, requestedRules, evidenceUrls);
     }
 
     /** 운영자가 근거와 함께 정책을 직접 바꾼 기록. 처음부터 승인된 상태로 남긴다. */
@@ -107,15 +125,19 @@ public class ConditionRequest extends BaseEntity {
             List<PolicyRule> rules,
             String reason) {
         ConditionRequest request =
-                new ConditionRequest(storeId, baseVersion, sourceText, operatorId, rules, List.of());
+                new ConditionRequest(
+                        storeId, baseVersion, sourceText, operatorId, rules, List.of());
         request.kind = ConditionRequestKind.OPERATOR_DIRECT;
         request.review(ConditionRequestStatus.APPROVED, reason, operatorId);
         return request;
     }
 
     /** 운영자가 업체 정책의 재검토를 요청한 기록. 요청한 정책 없이 사유만 원문에 담는다. */
-    public static ConditionRequest recheck(Long storeId, int baseVersion, String reason, Long operatorId) {
-        ConditionRequest request = new ConditionRequest(storeId, baseVersion, reason, operatorId, List.of(), List.of());
+    public static ConditionRequest recheck(
+            Long storeId, int baseVersion, String reason, Long operatorId) {
+        ConditionRequest request =
+                new ConditionRequest(
+                        storeId, baseVersion, reason, operatorId, List.of(), List.of());
         request.kind = ConditionRequestKind.RECHECK;
         return request;
     }
@@ -132,7 +154,8 @@ public class ConditionRequest extends BaseEntity {
 
     /** 대기 중(접수됨 또는 보완 요청됨)인 요청만 취소할 수 있다. */
     public boolean canCancel() {
-        return status == ConditionRequestStatus.RECEIVED || status == ConditionRequestStatus.NEEDS_SUPPLEMENT;
+        return status == ConditionRequestStatus.RECEIVED
+                || status == ConditionRequestStatus.NEEDS_SUPPLEMENT;
     }
 
     /** 보완 요청(NEEDS_SUPPLEMENT)을 받은 요청만 보완 제출할 수 있다. */
@@ -144,11 +167,9 @@ public class ConditionRequest extends BaseEntity {
         this.status = ConditionRequestStatus.CANCELED;
     }
 
-    /**
-     * 보완 내용을 반영하고 다시 접수(RECEIVED) 상태로 돌린다.
-     * null인 항목은 유지하고, 근거 URL은 기존 목록에 없는 것만 추가한다.
-     */
-    public void resubmit(List<PolicyRule> rules, String sourceText, List<String> additionalEvidenceUrls) {
+    /** 보완 내용을 반영하고 다시 접수(RECEIVED) 상태로 돌린다. null인 항목은 유지하고, 근거 URL은 기존 목록에 없는 것만 추가한다. */
+    public void resubmit(
+            List<PolicyRule> rules, String sourceText, List<String> additionalEvidenceUrls) {
         if (rules != null) {
             this.requestedRules.clear();
             this.requestedRules.addAll(rules);

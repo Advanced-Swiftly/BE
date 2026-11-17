@@ -1,17 +1,19 @@
 package com.advancedswiftly.pawfit.business.application;
 
 import com.advancedswiftly.pawfit.business.domain.Store;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
+
 import java.sql.Date;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Component;
 
 /**
- * 업체 QR을 발급·변경할 때 event_store에 같은 ID(store_id = store.id)의 행을 맞춘다.
- * 방문 인증·스탬프·통계가 event_store.store_id를 기준으로 하므로, 두 테이블의 ID를 같게 유지하는 것이 전제다.
- * 지역(region_id)이 없거나 진행 중(OPEN)인 이벤트가 없으면 조용히 건너뛴다.
+ * 업체 QR을 발급·변경할 때 event_store에 같은 ID(store_id = store.id)의 행을 맞춘다. 방문 인증·스탬프·통계가
+ * event_store.store_id를 기준으로 하므로, 두 테이블의 ID를 같게 유지하는 것이 전제다. 지역(region_id)이 없거나 진행 중(OPEN)인 이벤트가
+ * 없으면 조용히 건너뛴다.
  */
 @Component
 public class EventStoreSynchronizer {
@@ -25,54 +27,103 @@ public class EventStoreSynchronizer {
     /** 새 QR의 해시로 event_store 행을 만들거나 갱신한다. */
     public void syncIssued(Store store, String qrTokenHash) {
         Long storeId = store.getId();
-        int updated = jdbcTemplate.update(
-                "UPDATE event_store SET name = ?, qr_token_hash = ?, qr_revoked = FALSE WHERE store_id = ?",
-                store.getName(), qrTokenHash, storeId);
+        int updated =
+                jdbcTemplate.update(
+                        "UPDATE event_store SET name = ?, qr_token_hash = ?, qr_revoked = FALSE"
+                                + " WHERE store_id = ?",
+                        store.getName(),
+                        qrTokenHash,
+                        storeId);
         if (updated > 0 || store.getRegionId() == null) {
             return;
         }
-        List<Object[]> events = jdbcTemplate.query(
-                "SELECT event_id, ends_on FROM stamp_event WHERE status = 'OPEN' ORDER BY event_id DESC",
-                (rs, rowNum) -> new Object[] {rs.getLong(1), rs.getDate(2)});
+        List<Object[]> events =
+                jdbcTemplate.query(
+                        "SELECT e.event_id, e.ends_on FROM stamp_event e JOIN event_region r ON"
+                            + " r.event_id=e.event_id WHERE e.status='OPEN' AND e.starts_on<=? AND"
+                            + " e.ends_on>=? AND r.region_id=? ORDER BY e.starts_on DESC,e.event_id"
+                            + " DESC",
+                        (rs, rowNum) -> new Object[] {rs.getLong(1), rs.getDate(2)},
+                        Date.valueOf(
+                                com.advancedswiftly.pawfit.business.domain.EntryConditions.today()),
+                        Date.valueOf(
+                                com.advancedswiftly.pawfit.business.domain.EntryConditions.today()),
+                        store.getRegionId());
         if (events.isEmpty()) {
             return;
         }
         Long eventId = (Long) events.get(0)[0];
         LocalDate endsOn = ((Date) events.get(0)[1]).toLocalDate();
         jdbcTemplate.update(
-                "INSERT INTO event_store (store_id, event_id, region_id, name, latitude, longitude, approved, "
-                        + "qr_token_hash, qr_expires_at, qr_revoked) VALUES (?, ?, ?, ?, ?, ?, TRUE, ?, ?, FALSE)",
-                storeId, eventId, store.getRegionId(), store.getName(), store.getLatitude(), store.getLongitude(),
-                qrTokenHash, java.sql.Timestamp.from(endsOn.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant()));
+                "INSERT INTO event_store (store_id, event_id, region_id, name, latitude, longitude,"
+                    + " approved, qr_token_hash, qr_expires_at, qr_revoked) VALUES (?, ?, ?, ?, ?,"
+                    + " ?, TRUE, ?, ?, FALSE)",
+                storeId,
+                eventId,
+                store.getRegionId(),
+                store.getName(),
+                store.getLatitude(),
+                store.getLongitude(),
+                qrTokenHash,
+                java.sql.Timestamp.from(
+                        endsOn.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant()));
     }
 
     /** QR을 끄거나 다시 켤 때 event_store의 qr_revoked를 맞춘다. */
     public void syncRevoked(Long storeId, boolean revoked) {
-        jdbcTemplate.update("UPDATE event_store SET qr_revoked = ? WHERE store_id = ?", revoked, storeId);
+        jdbcTemplate.update(
+                "UPDATE event_store SET qr_revoked = ? WHERE store_id = ?", revoked, storeId);
     }
 
     /**
-     * 이벤트 참여가 승인된 업체를 해당 이벤트의 event_store로 맞춘다.
-     * 이미 행이 있으면 이름·QR 값만 갱신하고, 없으면 새로 만든다. 이벤트가 없으면 건너뛴다.
+     * 이벤트 참여가 승인된 업체를 해당 이벤트의 event_store로 맞춘다. 이미 행이 있으면 이름·QR 값만 갱신하고, 없으면 새로 만든다. 이벤트가 없으면 건너뛴다.
      */
-    public void syncApproved(Store store, Long eventId, Long regionId, String qrTokenHash, boolean qrRevoked) {
-        int updated = jdbcTemplate.update(
-                "UPDATE event_store SET name = ?, qr_token_hash = ?, qr_revoked = ?, approved = TRUE WHERE store_id = ?",
-                store.getName(), qrTokenHash, qrRevoked, store.getId());
+    public void syncApproved(
+            Store store, Long eventId, Long regionId, String qrTokenHash, boolean qrRevoked) {
+        var today =
+                Date.valueOf(com.advancedswiftly.pawfit.business.domain.EntryConditions.today());
+        Long active =
+                jdbcTemplate.queryForObject(
+                        "select count(*) from stamp_event where event_id=? and status='OPEN' and"
+                                + " starts_on<=? and ends_on>=?",
+                        Long.class,
+                        eventId,
+                        today,
+                        today);
+        if (active == null || active == 0) return;
+        int updated =
+                jdbcTemplate.update(
+                        "UPDATE event_store SET name = ?, qr_token_hash = ?, qr_revoked = ?,"
+                                + " approved = TRUE WHERE store_id = ?",
+                        store.getName(),
+                        qrTokenHash,
+                        qrRevoked,
+                        store.getId());
         if (updated > 0 || regionId == null) {
             return;
         }
-        List<Date> endDates = jdbcTemplate.query(
-                "SELECT ends_on FROM stamp_event WHERE event_id = ?", (rs, rowNum) -> rs.getDate(1), eventId);
+        List<Date> endDates =
+                jdbcTemplate.query(
+                        "SELECT ends_on FROM stamp_event WHERE event_id = ?",
+                        (rs, rowNum) -> rs.getDate(1),
+                        eventId);
         if (endDates.isEmpty()) {
             return;
         }
         LocalDate endsOn = endDates.get(0).toLocalDate();
         jdbcTemplate.update(
-                "INSERT INTO event_store (store_id, event_id, region_id, name, latitude, longitude, approved, "
-                        + "qr_token_hash, qr_expires_at, qr_revoked) VALUES (?, ?, ?, ?, ?, ?, TRUE, ?, ?, ?)",
-                store.getId(), eventId, regionId, store.getName(), store.getLatitude(), store.getLongitude(),
-                qrTokenHash, java.sql.Timestamp.from(endsOn.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant()),
+                "INSERT INTO event_store (store_id, event_id, region_id, name, latitude, longitude,"
+                    + " approved, qr_token_hash, qr_expires_at, qr_revoked) VALUES (?, ?, ?, ?, ?,"
+                    + " ?, TRUE, ?, ?, ?)",
+                store.getId(),
+                eventId,
+                regionId,
+                store.getName(),
+                store.getLatitude(),
+                store.getLongitude(),
+                qrTokenHash,
+                java.sql.Timestamp.from(
+                        endsOn.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant()),
                 qrRevoked);
     }
 }

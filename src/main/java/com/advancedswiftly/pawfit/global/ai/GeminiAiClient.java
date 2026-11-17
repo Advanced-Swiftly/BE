@@ -2,21 +2,25 @@ package com.advancedswiftly.pawfit.global.ai;
 
 import com.advancedswiftly.pawfit.global.config.PawfitProperties;
 import com.advancedswiftly.pawfit.global.http.ExternalRestClientFactory;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.springframework.http.MediaType;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.http.MediaType;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 
 public class GeminiAiClient extends AbstractHttpAiClient {
 
-    private static final String API_BASE = "https://generativelanguage.googleapis.com/v1beta/models/";
+    private static final String API_BASE =
+            "https://generativelanguage.googleapis.com/v1beta/models/";
     private final PawfitProperties.Ai properties;
     private final RestClient restClient;
     private final AiResponseParser responseParser;
@@ -34,14 +38,20 @@ public class GeminiAiClient extends AbstractHttpAiClient {
 
     @Override
     public VaccinationExtraction analyzeVaccination(MaskedDocument document) {
-        List<Map<String, Object>> parts = List.of(
-                Map.of("text", vaccinationPrompt()),
-                Map.of("inlineData", Map.of(
-                        "mimeType", document.contentType(),
-                        "data", Base64.getEncoder().encodeToString(document.content()))));
-        Map<String, Object> body = Map.of(
-                "contents", List.of(Map.of("role", "user", "parts", parts)),
-                "generationConfig", Map.of("responseMimeType", "application/json"));
+        List<Map<String, Object>> parts =
+                List.of(
+                        Map.of("text", vaccinationPrompt()),
+                        Map.of(
+                                "inlineData",
+                                Map.of(
+                                        "mimeType", document.contentType(),
+                                        "data",
+                                                Base64.getEncoder()
+                                                        .encodeToString(document.content()))));
+        Map<String, Object> body =
+                Map.of(
+                        "contents", List.of(Map.of("role", "user", "parts", parts)),
+                        "generationConfig", Map.of("responseMimeType", "application/json"));
         return responseParser.parseVaccinationExtraction(generate(body));
     }
 
@@ -55,7 +65,9 @@ public class GeminiAiClient extends AbstractHttpAiClient {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("contents", contents);
         if (request.systemPrompt() != null && !request.systemPrompt().isBlank()) {
-            body.put("systemInstruction", Map.of("parts", List.of(Map.of("text", request.systemPrompt()))));
+            body.put(
+                    "systemInstruction",
+                    Map.of("parts", List.of(Map.of("text", request.systemPrompt()))));
         }
         return generate(body);
     }
@@ -64,16 +76,25 @@ public class GeminiAiClient extends AbstractHttpAiClient {
         ensureConfigured();
         URI uri = URI.create(API_BASE + properties.getGemini().getModel() + ":generateContent");
         try {
-            JsonNode response = restClient.post()
-                    .uri(uri)
-                    .header("x-goog-api-key", properties.getGemini().getApiKey())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body)
-                    .retrieve()
-                    .body(JsonNode.class);
-            String text = response == null
-                    ? ""
-                    : response.path("candidates").path(0).path("content").path("parts").path(0).path("text").asText("");
+            JsonNode response =
+                    restClient
+                            .post()
+                            .uri(uri)
+                            .header("x-goog-api-key", properties.getGemini().getApiKey())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(body)
+                            .retrieve()
+                            .body(JsonNode.class);
+            String text =
+                    response == null
+                            ? ""
+                            : response.path("candidates")
+                                    .path(0)
+                                    .path("content")
+                                    .path("parts")
+                                    .path(0)
+                                    .path("text")
+                                    .asText("");
             if (text.isBlank()) {
                 throw new AiClientException("Gemini가 빈 응답을 반환했습니다.", false);
             }

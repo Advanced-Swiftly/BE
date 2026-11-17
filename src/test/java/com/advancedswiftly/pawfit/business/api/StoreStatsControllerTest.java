@@ -9,9 +9,7 @@ import com.advancedswiftly.pawfit.business.domain.Store;
 import com.advancedswiftly.pawfit.business.domain.StoreVerification;
 import com.advancedswiftly.pawfit.business.infrastructure.StoreRepository;
 import com.advancedswiftly.pawfit.business.infrastructure.StoreVerificationRepository;
-import java.math.BigDecimal;
-import java.sql.Timestamp;
-import java.time.Instant;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +23,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.time.Instant;
+
 @ActiveProfiles("test")
 @SpringBootTest
 @TestPropertySource(properties = "spring.jpa.hibernate.ddl-auto=create-drop")
@@ -32,19 +34,15 @@ class StoreStatsControllerTest {
 
     private static final long EVENT_ID = 9101L;
 
-    @Autowired
-    private WebApplicationContext context;
+    @Autowired private WebApplicationContext context;
 
     private MockMvc mockMvc;
 
-    @Autowired
-    private StoreRepository storeRepository;
+    @Autowired private StoreRepository storeRepository;
 
-    @Autowired
-    private StoreVerificationRepository verificationRepository;
+    @Autowired private StoreVerificationRepository verificationRepository;
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     private Long storeId;
 
@@ -74,46 +72,70 @@ class StoreStatsControllerTest {
     }
 
     private Long saveManagedStore(Long userId) {
-        Store store = storeRepository.save(Store.registerPending(
-                "멍카페", "02-0000-0000", "서울특별시 성동구", new BigDecimal("37.5446"), new BigDecimal("127.0557")));
-        StoreVerification verification = verificationRepository.save(StoreVerification.receive(
-                store, userId, String.valueOf(1000000000L + store.getId()), "카페", "홍길동", "https://example.com/doc.pdf"));
+        Store store =
+                storeRepository.save(
+                        Store.registerPending(
+                                "멍카페",
+                                "02-0000-0000",
+                                "서울특별시 성동구",
+                                new BigDecimal("37.5446"),
+                                new BigDecimal("127.0557")));
+        StoreVerification verification =
+                verificationRepository.save(
+                        StoreVerification.receive(
+                                store,
+                                userId,
+                                String.valueOf(1000000000L + store.getId()),
+                                "카페",
+                                "홍길동",
+                                "https://example.com/doc.pdf"));
         jdbcTemplate.update(
-                "update store_verification set status = 'APPROVED' where verification_id = ?", verification.getId());
+                "update store_verification set status = 'APPROVED' where verification_id = ?",
+                verification.getId());
         return store.getId();
     }
 
     private void insertEvent() {
         jdbcTemplate.update(
-                "insert into stamp_event (event_id, title, event_year, quarter, status, starts_on, ends_on,"
-                        + " required_stamp_count, max_stamp_count) values (?, '통계 이벤트', 2026, 4, 'OPEN',"
-                        + " '2026-10-01', '2026-12-31', 2, 10)",
+                "insert into stamp_event (event_id, title, event_year, quarter, status, starts_on,"
+                    + " ends_on, required_stamp_count, max_stamp_count) values (?, '통계 이벤트', 2026,"
+                    + " 4, 'OPEN', '2026-10-01', '2026-12-31', 2, 10)",
                 EVENT_ID);
     }
 
     private void visit(long userId, long forStoreId, String at) {
         jdbcTemplate.update(
-                "insert into visit (user_id, store_id, qr_token_hash, visited_at) values (?, ?, 'hash', ?)",
-                userId, forStoreId, Timestamp.from(Instant.parse(at)));
+                "insert into visit (user_id, store_id, qr_token_hash, visited_at) values (?, ?,"
+                        + " 'hash', ?)",
+                userId,
+                forStoreId,
+                Timestamp.from(Instant.parse(at)));
     }
 
     private void stamp(long userId, long forStoreId, String at) {
         jdbcTemplate.update(
-                "insert into event_stamp (event_id, user_id, store_id, awarded_at) values (?, ?, ?, ?)",
-                EVENT_ID, userId, forStoreId, Timestamp.from(Instant.parse(at)));
+                "insert into event_stamp (event_id, user_id, store_id, awarded_at) values (?, ?, ?,"
+                        + " ?)",
+                EVENT_ID,
+                userId,
+                forStoreId,
+                Timestamp.from(Instant.parse(at)));
     }
 
     private void drawEntry(long userId) {
         jdbcTemplate.update(
-                "insert into draw_entry (event_id, user_id, phone_number, address, privacy_agreed, status, created_at)"
-                        + " values (?, ?, '010-0000-0000', '서울', true, 'ENTERED', ?)",
-                EVENT_ID, userId, Timestamp.from(Instant.parse("2026-12-20T00:00:00Z")));
+                "insert into draw_entry (event_id, user_id, phone_number, address, privacy_agreed,"
+                    + " status, created_at) values (?, ?, '010-0000-0000', '서울', true, 'ENTERED',"
+                    + " ?)",
+                EVENT_ID,
+                userId,
+                Timestamp.from(Instant.parse("2026-12-20T00:00:00Z")));
     }
 
     private void insertData() {
         long otherStoreId = storeId + 1000;
         // 이 업체의 방문: 이벤트 기간 안 5건(10/31, 11/2 두 건, 11/4, 11/9), 이벤트 기간 밖 1건(2027-01-02)
-        visit(11, storeId, "2026-10-31T23:00:00Z");
+        visit(11, storeId, "2026-10-31T14:00:00Z");
         visit(11, storeId, "2026-11-02T01:00:00Z");
         visit(12, storeId, "2026-11-02T10:00:00Z");
         visit(13, storeId, "2026-11-04T05:00:00Z");
@@ -143,6 +165,19 @@ class StoreStatsControllerTest {
 
     @Test
     @WithMockUser(username = "1", roles = "BUSINESS")
+    void countsKoreanMidnightAndDistinctGuardiansAndHours() throws Exception {
+        visit(17, storeId, "2026-10-31T15:00:00Z");
+        mockMvc.perform(get(visitStatsUrl()).param("from", "2026-11-01").param("to", "2026-11-01"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalVisits").value(1))
+                .andExpect(jsonPath("$.guardianCount").value(1))
+                .andExpect(jsonPath("$.dailyAverage").value(1.0))
+                .andExpect(jsonPath("$.byHour[0].count").value(1))
+                .andExpect(jsonPath("$.byWeekday[0].count").value(1));
+    }
+
+    @Test
+    @WithMockUser(username = "1", roles = "BUSINESS")
     void aggregatesVisitsByDayByDefault() throws Exception {
         mockMvc.perform(get(visitStatsUrl()).param("from", "2026-11-01").param("to", "2026-11-30"))
                 .andExpect(status().isOk())
@@ -160,8 +195,11 @@ class StoreStatsControllerTest {
     @Test
     @WithMockUser(username = "1", roles = "BUSINESS")
     void aggregatesVisitsByWeek() throws Exception {
-        mockMvc.perform(get(visitStatsUrl())
-                        .param("from", "2026-11-01").param("to", "2026-11-30").param("groupBy", "WEEK"))
+        mockMvc.perform(
+                        get(visitStatsUrl())
+                                .param("from", "2026-11-01")
+                                .param("to", "2026-11-30")
+                                .param("groupBy", "WEEK"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalVisits").value(4))
                 .andExpect(jsonPath("$.series.length()").value(2))
@@ -174,8 +212,11 @@ class StoreStatsControllerTest {
     @Test
     @WithMockUser(username = "1", roles = "BUSINESS")
     void aggregatesVisitsByMonth() throws Exception {
-        mockMvc.perform(get(visitStatsUrl())
-                        .param("from", "2026-10-01").param("to", "2026-11-30").param("groupBy", "MONTH"))
+        mockMvc.perform(
+                        get(visitStatsUrl())
+                                .param("from", "2026-10-01")
+                                .param("to", "2026-11-30")
+                                .param("groupBy", "MONTH"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalVisits").value(5))
                 .andExpect(jsonPath("$.series.length()").value(2))
@@ -219,8 +260,11 @@ class StoreStatsControllerTest {
         mockMvc.perform(get(visitStatsUrl()).param("from", "2026-11-30").param("to", "2026-11-01"))
                 .andExpect(status().isBadRequest());
         // 허용되지 않는 groupBy
-        mockMvc.perform(get(visitStatsUrl())
-                        .param("from", "2026-11-01").param("to", "2026-11-30").param("groupBy", "YEAR"))
+        mockMvc.perform(
+                        get(visitStatsUrl())
+                                .param("from", "2026-11-01")
+                                .param("to", "2026-11-30")
+                                .param("groupBy", "YEAR"))
                 .andExpect(status().isBadRequest());
         // 기간이 366일을 넘음
         mockMvc.perform(get(visitStatsUrl()).param("from", "2025-01-01").param("to", "2026-11-30"))
@@ -232,8 +276,10 @@ class StoreStatsControllerTest {
     void cannotReadStatsOfStoreNotManagedByUser() throws Exception {
         Long othersStoreId = saveManagedStore(2L);
 
-        mockMvc.perform(get("/api/v1/business/stores/" + othersStoreId + "/visit-stats")
-                        .param("from", "2026-11-01").param("to", "2026-11-30"))
+        mockMvc.perform(
+                        get("/api/v1/business/stores/" + othersStoreId + "/visit-stats")
+                                .param("from", "2026-11-01")
+                                .param("to", "2026-11-30"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("AUTH_002"));
     }
@@ -272,7 +318,9 @@ class StoreStatsControllerTest {
     void cannotReadEventStatsOfStoreNotManagedByUser() throws Exception {
         Long othersStoreId = saveManagedStore(2L);
 
-        mockMvc.perform(get(eventStatsUrl(othersStoreId)).param("eventId", String.valueOf(EVENT_ID)))
+        mockMvc.perform(
+                        get(eventStatsUrl(othersStoreId))
+                                .param("eventId", String.valueOf(EVENT_ID)))
                 .andExpect(status().isForbidden());
     }
 

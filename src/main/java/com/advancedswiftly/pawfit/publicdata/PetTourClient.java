@@ -1,6 +1,13 @@
 package com.advancedswiftly.pawfit.publicdata;
 
 import com.advancedswiftly.pawfit.global.http.ExternalRestClientFactory;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import tools.jackson.databind.JsonNode;
+
 import java.math.BigDecimal;
 import java.net.URI;
 import java.time.Duration;
@@ -11,18 +18,27 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-import org.springframework.web.util.UriComponentsBuilder;
-import tools.jackson.databind.JsonNode;
 
 @Component
 class PetTourClient {
     private static final String ENDPOINT =
             "https://apis.data.go.kr/B551011/KorPetTourService2/areaBasedList2";
-    private static final Map<String, String> CATEGORIES = Map.of(
-            "12", "ATTRACTION", "14", "CULTURE", "15", "EVENT", "28", "LEISURE",
-            "32", "LODGING", "38", "SHOPPING", "39", "FOOD");
+    private static final Map<String, String> CATEGORIES =
+            Map.of(
+                    "12",
+                    "ATTRACTION",
+                    "14",
+                    "CULTURE",
+                    "15",
+                    "EVENT",
+                    "28",
+                    "LEISURE",
+                    "32",
+                    "LODGING",
+                    "38",
+                    "SHOPPING",
+                    "39",
+                    "FOOD");
 
     private final String key;
     private final org.springframework.web.client.RestClient client =
@@ -51,7 +67,10 @@ class PetTourClient {
             JsonNode body = root.path("body");
             int total = body.path("totalCount").asInt(-1);
             JsonNode item = body.path("items").path("item");
-            var entries = item.isArray() ? item.values() : item.isObject() ? List.of(item) : List.<JsonNode>of();
+            var entries =
+                    item.isArray()
+                            ? item.values()
+                            : item.isObject() ? List.of(item) : List.<JsonNode>of();
             int count = 0;
             for (JsonNode entry : entries) {
                 Row row = normalize(entry);
@@ -69,13 +88,20 @@ class PetTourClient {
     }
 
     private URI uri(int page, Instant since) {
-        var uri = UriComponentsBuilder.fromUriString(ENDPOINT).queryParam("serviceKey", "{key}")
-                .queryParam("MobileOS", "ETC").queryParam("MobileApp", "PawFit")
-                .queryParam("_type", "json").queryParam("arrange", "A")
-                .queryParam("pageNo", page).queryParam("numOfRows", 100);
+        var uri =
+                UriComponentsBuilder.fromUriString(ENDPOINT)
+                        .queryParam("serviceKey", "{key}")
+                        .queryParam("MobileOS", "ETC")
+                        .queryParam("MobileApp", "PawFit")
+                        .queryParam("_type", "json")
+                        .queryParam("arrange", "A")
+                        .queryParam("pageNo", page)
+                        .queryParam("numOfRows", 100);
         if (since != null) {
-            uri.queryParam("modifiedtime", LocalDate.ofInstant(since, ZoneId.of("Asia/Seoul"))
-                    .format(DateTimeFormatter.BASIC_ISO_DATE));
+            uri.queryParam(
+                    "modifiedtime",
+                    LocalDate.ofInstant(since, ZoneId.of("Asia/Seoul"))
+                            .format(DateTimeFormatter.BASIC_ISO_DATE));
         }
         return uri.encode().buildAndExpand(key).toUri();
     }
@@ -89,27 +115,56 @@ class PetTourClient {
             BigDecimal longitude = new BigDecimal(item.path("mapx").asText("").strip());
             if (latitude.abs().compareTo(BigDecimal.valueOf(90)) > 0
                     || longitude.abs().compareTo(BigDecimal.valueOf(180)) > 0) return null;
-            String address = (item.path("addr1").asText("") + " " + item.path("addr2").asText("")).strip();
-            return new Row(id, limit(name, 150), address.isEmpty() ? null : limit(address, 255),
+            String address =
+                    (item.path("addr1").asText("") + " " + item.path("addr2").asText("")).strip();
+            return new Row(
+                    id,
+                    limit(name, 150),
+                    address.isEmpty() ? null : limit(address, 255),
                     CATEGORIES.get(item.path("contenttypeid").asText("")),
                     latitude.setScale(7, java.math.RoundingMode.HALF_UP),
                     longitude.setScale(7, java.math.RoundingMode.HALF_UP),
-                    regionId(item.path("lDongRegnCd").asText("")));
+                    regionId(item.path("lDongRegnCd").asText("")),
+                    safeImage(item.path("firstimage").asText("")),
+                    limit(item.path("tel").asText(""), 80));
         } catch (ArithmeticException | NumberFormatException exception) {
             return null;
         }
     }
 
+    private static String safeImage(String url) {
+        if (url == null || url.isBlank()) return null;
+        try {
+            URI uri = URI.create(url);
+            if (!List.of("https", "http").contains(uri.getScheme()) || uri.getHost() == null)
+                return null;
+            return limit(url, 2000);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
     private static String limit(String value, int length) {
-        return value.substring(0, value.offsetByCodePoints(0,
-                Math.min(length, value.codePointCount(0, value.length()))));
+        return value.substring(
+                0,
+                value.offsetByCodePoints(
+                        0, Math.min(length, value.codePointCount(0, value.length()))));
     }
 
     private static Long regionId(String code) {
         return code.matches("[0-9]{2}") ? Long.valueOf(code) : null;
     }
 
-    record Row(String id, String name, String address, String category,
-               BigDecimal latitude, BigDecimal longitude, Long regionId) {}
+    record Row(
+            String id,
+            String name,
+            String address,
+            String category,
+            BigDecimal latitude,
+            BigDecimal longitude,
+            Long regionId,
+            String imageUrl,
+            String phone) {}
+
     record Batch(List<Row> rows, int failed) {}
 }
