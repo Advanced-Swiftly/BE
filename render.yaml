@@ -55,3 +55,8 @@ services:
         sync: false
       - key: GEMINI_MODEL
         value: gemini-3.8-flash
+      # 미설정 시 사업자 상태조회는 503을 반환합니다.
+      - key: NTS_BUSINESS_STATUS_SERVICE_KEY
+        sync: false
+      - key: NTS_BUSINESS_STATUS_TIMEOUT
+        value: 5s

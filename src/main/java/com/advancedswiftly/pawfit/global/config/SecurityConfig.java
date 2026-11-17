@@ -40,6 +40,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(restSecurityExceptionHandler))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/business/auth/login-id/check").permitAll()
                         .requestMatchers(
                                 "/actuator/health/**",
                                 "/actuator/info",

@@ -4,6 +4,8 @@ import com.advancedswiftly.pawfit.auth.domain.PhoneVerificationPurpose;
 import com.advancedswiftly.pawfit.auth.domain.UserRole;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -45,7 +47,8 @@ public final class AuthDtos {
             @NotBlank String phoneVerificationToken,
             @NotBlank @Size(max = 50) String name,
             @NotBlank @Size(min = 8, max = 72) String password,
-            @NotEmpty List<@Valid TermAgreementRequest> termAgreements) {
+            @NotEmpty List<@Valid TermAgreementRequest> termAgreements,
+            @Email @Size(min = 3, max = 254) String loginId) {
     }
 
     public record SignupResponse(
@@ -53,13 +56,19 @@ public final class AuthDtos {
     }
 
     public record LoginRequest(
-            @NotBlank
             @Pattern(
                     regexp = "^(?:\\+82[- ]?|0)10[- ]?\\d{4}[- ]?\\d{4}$",
                     message = "올바른 휴대전화 번호 형식이어야 합니다.")
             String phoneNumber,
             @NotBlank String password,
-            @Size(max = 255) String deviceToken) {
+            @Size(max = 255) String deviceToken,
+            @Email @Size(min = 3, max = 254) String loginId) {
+
+        @AssertTrue(message = "phoneNumber 또는 loginId 중 하나만 입력해야 합니다.")
+        public boolean isIdentifierValid() {
+            return (phoneNumber != null && !phoneNumber.isBlank())
+                    ^ (loginId != null && !loginId.isBlank());
+        }
     }
 
     public record UserSummary(Long userId, UserRole role, String name) {

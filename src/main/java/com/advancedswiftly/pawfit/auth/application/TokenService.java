@@ -3,6 +3,7 @@ package com.advancedswiftly.pawfit.auth.application;
 import com.advancedswiftly.pawfit.auth.domain.RefreshToken;
 import com.advancedswiftly.pawfit.auth.domain.User;
 import com.advancedswiftly.pawfit.auth.infrastructure.RefreshTokenRepository;
+import com.advancedswiftly.pawfit.auth.infrastructure.UserRepository;
 import com.advancedswiftly.pawfit.global.config.PawfitProperties;
 import com.advancedswiftly.pawfit.global.error.BusinessException;
 import com.advancedswiftly.pawfit.global.error.ErrorCode;
@@ -26,18 +27,21 @@ public class TokenService {
     private final PawfitProperties.Auth properties;
     private final SecureRandom secureRandom;
     private final Clock clock;
+    private final UserRepository users;
 
     @Autowired
     public TokenService(
             RefreshTokenRepository refreshTokenRepository,
             JwtTokenProvider jwtTokenProvider,
-            PawfitProperties properties) {
+            PawfitProperties properties,
+            UserRepository users) {
         this(
                 refreshTokenRepository,
                 jwtTokenProvider,
                 properties.getAuth(),
                 new SecureRandom(),
-                Clock.systemUTC());
+                Clock.systemUTC(),
+                users);
     }
 
     TokenService(
@@ -45,16 +49,21 @@ public class TokenService {
             JwtTokenProvider jwtTokenProvider,
             PawfitProperties.Auth properties,
             SecureRandom secureRandom,
-            Clock clock) {
+            Clock clock,
+            UserRepository users) {
         this.refreshTokenRepository = refreshTokenRepository;
         this.jwtTokenProvider = jwtTokenProvider;
         this.properties = properties;
         this.secureRandom = secureRandom;
         this.clock = clock;
+        this.users = users;
     }
 
     @Transactional
     public IssuedTokens issue(User user, String deviceToken) {
+        users.findByIdForUpdate(user.getId())
+                .filter(User::isActive)
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
         String rawRefreshToken = randomToken();
         refreshTokenRepository.save(RefreshToken.issue(
                 user,
@@ -86,10 +95,24 @@ public class TokenService {
     }
 
     private RefreshToken findUsable(String rawRefreshToken, Instant now) {
+        // 비밀번호 변경과 token 회전 모두 user -> refresh token 순서로 잠근다.
+        Long userId = refreshTokenRepository.findUserIdByTokenHash(TokenHash.sha256(rawRefreshToken))
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN));
+        users.findByIdForUpdate(userId)
+                .filter(User::isActive)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN));
         return refreshTokenRepository
                 .findForUpdateByTokenHash(TokenHash.sha256(rawRefreshToken))
                 .filter(token -> token.isUsableAt(now))
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN));
+    }
+
+    @Transactional
+    public void revokeAll(Long userId) {
+        users.findByIdForUpdate(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
+        Instant now = clock.instant();
+        refreshTokenRepository.findByUserIdAndRevokedAtIsNull(userId).forEach(token -> token.revoke(now));
     }
 
     private String randomToken() {

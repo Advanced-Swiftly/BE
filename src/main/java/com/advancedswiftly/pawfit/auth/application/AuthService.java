@@ -21,6 +21,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -70,15 +71,24 @@ public class AuthService {
         }
 
         AgreementSelection selection = validateAgreements(role, request.termAgreements());
+        String loginId = request.loginId() == null ? null : normalizeLoginId(request.loginId());
+        if (loginId != null && userRepository.existsByLoginId(loginId)) {
+            throw new BusinessException(ErrorCode.DUPLICATE_LOGIN_ID);
+        }
         User user = User.register(
                 phoneNumber,
                 passwordEncoder.encode(request.password()),
                 request.name().trim(),
                 role);
+        user.assignLoginId(loginId);
         try {
             userRepository.saveAndFlush(user);
         } catch (DataIntegrityViolationException exception) {
-            throw new BusinessException(ErrorCode.DUPLICATE_PHONE_NUMBER);
+            // 고유 제약 위반은 동시 가입에서도 409로 처리한다. 실패한 transaction에서 재조회하지 않는다.
+            if (loginId == null) {
+                throw new BusinessException(ErrorCode.DUPLICATE_PHONE_NUMBER);
+            }
+            throw new BusinessException(ErrorCode.CONFLICT, "이미 사용 중인 가입 정보입니다.");
         }
 
         Instant now = clock.instant();
@@ -93,8 +103,9 @@ public class AuthService {
 
     @Transactional
     public LoginResponse login(LoginRequest request) {
-        String phoneNumber = phoneNumberNormalizer.normalize(request.phoneNumber());
-        User user = userRepository.findByPhoneNumber(phoneNumber)
+        User user = (request.loginId() != null
+                ? userRepository.findByLoginIdForUpdate(normalizeLoginId(request.loginId()))
+                : userRepository.findByPhoneNumberForUpdate(phoneNumberNormalizer.normalize(request.phoneNumber())))
                 .filter(User::isActive)
                 .filter(value -> passwordEncoder.matches(request.password(), value.getPasswordHash()))
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
@@ -114,6 +125,15 @@ public class AuthService {
     @Transactional
     public void logout(Long userId, LogoutRequest request) {
         tokenService.revoke(userId, request.refreshToken(), request.deviceToken());
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isLoginIdAvailable(String loginId) {
+        return !userRepository.existsByLoginId(normalizeLoginId(loginId));
+    }
+
+    private static String normalizeLoginId(String loginId) {
+        return loginId.strip().toLowerCase(Locale.ROOT);
     }
 
     private AgreementSelection validateAgreements(

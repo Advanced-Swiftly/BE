@@ -4,12 +4,18 @@ import com.advancedswiftly.pawfit.business.api.dto.AdApplicationCreateRequest;
 import com.advancedswiftly.pawfit.business.api.dto.AdApplicationDetailResponse;
 import com.advancedswiftly.pawfit.business.api.dto.AdApplicationListItem;
 import com.advancedswiftly.pawfit.business.api.dto.AdApplicationListResponse;
+import com.advancedswiftly.pawfit.business.api.dto.AdApplicationUpdateRequest;
+import com.advancedswiftly.pawfit.business.api.dto.AdApplicationUpdateResponse;
 import com.advancedswiftly.pawfit.business.api.dto.ApplicationResultResponse;
 import com.advancedswiftly.pawfit.business.domain.AdApplication;
 import com.advancedswiftly.pawfit.business.domain.ApplicationStatus;
+import com.advancedswiftly.pawfit.business.domain.Store;
 import com.advancedswiftly.pawfit.business.infrastructure.AdApplicationRepository;
+import com.advancedswiftly.pawfit.business.infrastructure.StoreRepository;
 import com.advancedswiftly.pawfit.global.error.BusinessException;
 import com.advancedswiftly.pawfit.global.error.ErrorCode;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,11 +25,14 @@ public class AdApplicationService {
 
     private final AdApplicationRepository applicationRepository;
     private final ManagedStoreChecker managedStoreChecker;
+    private final StoreRepository stores;
 
     public AdApplicationService(
-            AdApplicationRepository applicationRepository, ManagedStoreChecker managedStoreChecker) {
+            AdApplicationRepository applicationRepository, ManagedStoreChecker managedStoreChecker,
+            StoreRepository stores) {
         this.applicationRepository = applicationRepository;
         this.managedStoreChecker = managedStoreChecker;
+        this.stores = stores;
     }
 
     @Transactional
@@ -63,12 +72,46 @@ public class AdApplicationService {
 
     @Transactional
     public ApplicationResultResponse cancel(Long userId, Long applicationId) {
-        AdApplication application = find(userId, applicationId);
+        AdApplication application = findForUpdate(userId, applicationId);
         if (!application.canCancel()) {
             throw new BusinessException(ErrorCode.CANCEL_NOT_ALLOWED);
         }
         application.cancel();
         return ApplicationResultResponse.of(application.getId(), application.getStatus());
+    }
+
+    @Transactional
+    public AdApplicationUpdateResponse update(Long userId, Long applicationId, AdApplicationUpdateRequest request) {
+        AdApplication application = findForUpdate(userId, applicationId);
+        if (request.action() != null) {
+            if (!application.canCancel()) {
+                throw new BusinessException(ErrorCode.CANCEL_NOT_ALLOWED);
+            }
+            application.cancel();
+        } else {
+            if (application.getStatus() != ApplicationStatus.RECEIVED) {
+                throw new BusinessException(ErrorCode.REQUEST_NOT_EDITABLE);
+            }
+            managedStoreChecker.requireManagedStore(userId, application.getStoreId());
+            LocalDate start = request.startDate() == null ? application.getStartDate() : request.startDate();
+            long days = request.weeks() == null
+                    ? ChronoUnit.DAYS.between(application.getStartDate(), application.getEndDate()) + 1
+                    : request.weeks() * 7L;
+            LocalDate end = start.plusDays(days - 1);
+            if (end.getYear() > 9999) {
+                throw new BusinessException(ErrorCode.INVALID_REQUEST, "광고 종료일의 연도는 9999 이하여야 합니다.");
+            }
+            application.updatePeriod(start, end);
+        }
+        applicationRepository.flush();
+        String storeName = stores.findById(application.getStoreId()).map(Store::getName).orElse("");
+        return AdApplicationUpdateResponse.from(application, storeName);
+    }
+
+    private AdApplication findForUpdate(Long userId, Long applicationId) {
+        return applicationRepository.findByIdForUpdate(applicationId)
+                .filter(application -> application.getSubmittedBy().equals(userId))
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
 
     private AdApplication find(Long userId, Long applicationId) {

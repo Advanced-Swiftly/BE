@@ -3,6 +3,10 @@ package com.advancedswiftly.pawfit.global.error;
 import org.springframework.http.HttpStatus;
 
 public enum ErrorCode {
+    DUPLICATE_LOGIN_ID(HttpStatus.CONFLICT, "DUPLICATE_LOGIN_ID", "이미 사용 중인 이메일 아이디입니다."),
+    BUSINESS_STATUS_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "BUSINESS_STATUS_UNAVAILABLE", "사업자 상태조회 서비스를 사용할 수 없습니다."),
+    REQUEST_NOT_EDITABLE(HttpStatus.BAD_REQUEST, "REQUEST_NOT_EDITABLE", "심사 전 광고 신청만 수정할 수 있습니다."),
+    EVENT_NOT_ELIGIBLE(HttpStatus.BAD_REQUEST, "EVENT_NOT_ELIGIBLE", "이벤트 참여 조건을 충족하지 않습니다."),
     CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_SESSION_NOT_FOUND", "요청을 처리할 수 없습니다."),
     CHAT_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "CHAT_SERVICE_UNAVAILABLE", "요청을 처리할 수 없습니다."),
     CHAT_SESSION_CHANGED(HttpStatus.CONFLICT, "CHAT_SESSION_CHANGED", "대화가 갱신되었습니다. 다시 시도해 주세요."),

@@ -13,6 +13,9 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -54,6 +57,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ResponseEntity<ApiErrorResponse> handleHttpMessageNotReadable(
             HttpMessageNotReadableException exception, HttpServletRequest request) {
+        ErrorCode errorCode = ErrorCode.INVALID_REQUEST;
+        return ResponseEntity.status(errorCode.getStatus())
+                .body(errorResponse(errorCode, errorCode.getMessage(), request, Map.of()));
+    }
+
+    @ExceptionHandler({MissingServletRequestParameterException.class, MethodArgumentTypeMismatchException.class,
+            HandlerMethodValidationException.class})
+    ResponseEntity<ApiErrorResponse> handleInvalidParameter(Exception exception, HttpServletRequest request) {
         ErrorCode errorCode = ErrorCode.INVALID_REQUEST;
         return ResponseEntity.status(errorCode.getStatus())
                 .body(errorResponse(errorCode, errorCode.getMessage(), request, Map.of()));

@@ -23,6 +23,9 @@ public class User extends BaseEntity {
     @Column(name = "phone_number", nullable = false, unique = true, length = 20)
     private String phoneNumber;
 
+    @Column(name = "login_id", unique = true, length = 254)
+    private String loginId;
+
     @Column(name = "password_hash", nullable = false, length = 100)
     private String passwordHash;
 
@@ -89,6 +92,18 @@ public class User extends BaseEntity {
     public static User register(
             String phoneNumber, String passwordHash, String name, UserRole role) {
         return new User(phoneNumber, passwordHash, name, role);
+    }
+
+    public void assignLoginId(String loginId) {
+        this.loginId = loginId;
+    }
+
+    public String getLoginId() {
+        return loginId;
+    }
+
+    public void changePassword(String passwordHash) {
+        this.passwordHash = passwordHash;
     }
 
     public Long getId() {

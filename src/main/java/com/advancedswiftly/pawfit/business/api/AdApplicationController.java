@@ -3,7 +3,8 @@ package com.advancedswiftly.pawfit.business.api;
 import com.advancedswiftly.pawfit.business.api.dto.AdApplicationCreateRequest;
 import com.advancedswiftly.pawfit.business.api.dto.AdApplicationDetailResponse;
 import com.advancedswiftly.pawfit.business.api.dto.AdApplicationListResponse;
-import com.advancedswiftly.pawfit.business.api.dto.ApplicationCancelRequest;
+import com.advancedswiftly.pawfit.business.api.dto.AdApplicationUpdateRequest;
+import com.advancedswiftly.pawfit.business.api.dto.AdApplicationUpdateResponse;
 import com.advancedswiftly.pawfit.business.api.dto.ApplicationResultResponse;
 import com.advancedswiftly.pawfit.business.application.AdApplicationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -86,18 +87,20 @@ public class AdApplicationController {
     }
 
     @Operation(
-            summary = "광고 신청 취소",
-            description = "심사 전(RECEIVED) 광고 신청을 취소합니다. 이미 심사가 시작됐다면 CANCEL_NOT_ALLOWED를 반환합니다.")
+            summary = "광고 신청 취소·기간 수정",
+            description = "CANCEL 단독 요청은 기존 취소와 같습니다. startDate·weeks는 RECEIVED 상태에서만 수정할 수 있습니다.")
     @ApiResponse(responseCode = "200", description = "취소 성공")
     @ApiResponse(responseCode = "400", description = "요청 값 오류 또는 CANCEL_NOT_ALLOWED")
     @ApiResponse(responseCode = "401", description = "인증 필요")
     @ApiResponse(responseCode = "403", description = "업체 관리자 권한 필요")
     @ApiResponse(responseCode = "404", description = "존재하지 않거나 본인의 신청이 아님")
     @PatchMapping("/{applicationId}")
-    public ApplicationResultResponse cancel(
+    public ApplicationResultResponse update(
             Authentication authentication,
             @Parameter(description = "광고 신청 ID", example = "1601") @PathVariable Long applicationId,
-            @Valid @RequestBody ApplicationCancelRequest request) {
-        return applicationService.cancel(BusinessControllerSupport.currentUserId(authentication), applicationId);
+            @Valid @RequestBody AdApplicationUpdateRequest request) {
+        AdApplicationUpdateResponse response = applicationService.update(
+                BusinessControllerSupport.currentUserId(authentication), applicationId, request);
+        return ApplicationResultResponse.of(Long.valueOf(response.applicationId()), response.status());
     }
 }
