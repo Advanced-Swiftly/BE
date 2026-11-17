@@ -14,6 +14,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -66,25 +67,77 @@ public class StampEvent {
     @OneToMany(mappedBy = "event", fetch = FetchType.LAZY)
     private List<EventPrize> prizes;
 
-    protected StampEvent() {
+    protected StampEvent() {}
+
+    @Column(name = "recruitment_starts_on")
+    private LocalDate recruitmentStartsOn;
+
+    @Column(name = "recruitment_ends_on")
+    private LocalDate recruitmentEndsOn;
+
+    public LocalDate getRecruitmentStartsOn() {
+        return recruitmentStartsOn == null ? startsOn : recruitmentStartsOn;
+    }
+
+    public LocalDate getRecruitmentEndsOn() {
+        return recruitmentEndsOn == null ? endsOn : recruitmentEndsOn;
+    }
+
+    public boolean isRecruitingAt(LocalDate date) {
+        LocalDate start = recruitmentStartsOn == null ? startsOn : recruitmentStartsOn;
+        LocalDate end = recruitmentEndsOn == null ? endsOn : recruitmentEndsOn;
+        return status == EventStatus.OPEN && !date.isBefore(start) && !date.isAfter(end);
     }
 
     public boolean isOpenAt(LocalDate date) {
-        return status == EventStatus.OPEN
-                && !date.isBefore(startsOn)
-                && !date.isAfter(endsOn);
+        return status == EventStatus.OPEN && !date.isBefore(startsOn) && !date.isAfter(endsOn);
     }
 
-    public Long getId() { return id; }
-    public String getTitle() { return title; }
-    public int getYear() { return year; }
-    public int getQuarter() { return quarter; }
-    public EventStatus getStatus() { return status; }
-    public LocalDate getStartsOn() { return startsOn; }
-    public LocalDate getEndsOn() { return endsOn; }
-    public int getRequiredStampCount() { return requiredStampCount; }
-    public int getMaxStampCount() { return maxStampCount; }
-    public String getNotice() { return notice; }
-    public Set<Long> getRegionIds() { return Collections.unmodifiableSet(regionIds); }
-    public List<EventPrize> getPrizes() { return List.copyOf(prizes); }
+    public Long getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public int getYear() {
+        return year;
+    }
+
+    public int getQuarter() {
+        return quarter;
+    }
+
+    public EventStatus getStatus() {
+        return status;
+    }
+
+    public LocalDate getStartsOn() {
+        return startsOn;
+    }
+
+    public LocalDate getEndsOn() {
+        return endsOn;
+    }
+
+    public int getRequiredStampCount() {
+        return requiredStampCount;
+    }
+
+    public int getMaxStampCount() {
+        return maxStampCount;
+    }
+
+    public String getNotice() {
+        return notice;
+    }
+
+    public Set<Long> getRegionIds() {
+        return Collections.unmodifiableSet(regionIds);
+    }
+
+    public List<EventPrize> getPrizes() {
+        return List.copyOf(prizes);
+    }
 }

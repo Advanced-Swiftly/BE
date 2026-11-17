@@ -21,8 +21,7 @@ import com.advancedswiftly.pawfit.business.infrastructure.StorePolicyRepository;
 import com.advancedswiftly.pawfit.business.infrastructure.StoreQrRepository;
 import com.advancedswiftly.pawfit.business.infrastructure.StoreRepository;
 import com.advancedswiftly.pawfit.business.infrastructure.StoreVerificationRepository;
-import java.math.BigDecimal;
-import java.util.List;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,41 +36,43 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.math.BigDecimal;
+import java.util.List;
+
 @ActiveProfiles("test")
 @SpringBootTest
 @TestPropertySource(properties = "spring.jpa.hibernate.ddl-auto=create-drop")
 class StoreManagementControllerTest {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.advancedswiftly.pawfit.global.storage.StorageClient storageClient;
 
     private static final String BASE = "/api/v1/business";
 
-    @Autowired
-    private WebApplicationContext context;
+    @Autowired private WebApplicationContext context;
 
     private MockMvc mockMvc;
 
-    @Autowired
-    private StoreRepository storeRepository;
+    @Autowired private StoreRepository storeRepository;
 
-    @Autowired
-    private StoreVerificationRepository verificationRepository;
+    @Autowired private StoreVerificationRepository verificationRepository;
 
-    @Autowired
-    private StorePolicyRepository policyRepository;
+    @Autowired private StorePolicyRepository policyRepository;
 
-    @Autowired
-    private ConditionRequestRepository requestRepository;
+    @Autowired private ConditionRequestRepository requestRepository;
 
-    @Autowired
-    private StoreQrRepository qrRepository;
+    @Autowired private StoreQrRepository qrRepository;
 
-    @Autowired
-    private StoreBusinessHoursRepository hoursRepository;
+    @Autowired private StoreBusinessHoursRepository hoursRepository;
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.when(
+                        storageClient.createSignedReadUrl(
+                                org.mockito.ArgumentMatchers.anyString(),
+                                org.mockito.ArgumentMatchers.any()))
+                .thenReturn(java.net.URI.create("https://storage.example.test/qr.png"));
         mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY FALSE");
         jdbcTemplate.update("delete from event_store");
@@ -91,19 +92,43 @@ class StoreManagementControllerTest {
     }
 
     private Long saveManagedStore(Long userId) {
-        Store store = storeRepository.save(Store.registerPending(
-                "멍카페", "02-0000-0000", "서울특별시 성동구", new BigDecimal("37.5446"), new BigDecimal("127.0557")));
-        StoreVerification verification = verificationRepository.save(StoreVerification.receive(
-                store, userId, String.valueOf(1000000000L + store.getId()), "카페", "홍길동", "https://example.com/doc.pdf"));
+        Store store =
+                storeRepository.save(
+                        Store.registerPending(
+                                "멍카페",
+                                "02-0000-0000",
+                                "서울특별시 성동구",
+                                new BigDecimal("37.5446"),
+                                new BigDecimal("127.0557")));
+        StoreVerification verification =
+                verificationRepository.save(
+                        StoreVerification.receive(
+                                store,
+                                userId,
+                                String.valueOf(1000000000L + store.getId()),
+                                "카페",
+                                "홍길동",
+                                "https://example.com/doc.pdf"));
         jdbcTemplate.update(
-                "update store_verification set status = 'APPROVED' where verification_id = ?", verification.getId());
+                "update store_verification set status = 'APPROVED' where verification_id = ?",
+                verification.getId());
         return store.getId();
     }
 
     private Long saveRequest(Long userId, Long storeId, String status) {
-        ConditionRequest saved = requestRepository.save(ConditionRequest.receive(
-                storeId, 0, "정책 원문", userId, List.of(new PolicyRule(PolicyRuleType.EQUIPMENT, "CARRIER", true)), List.of()));
-        jdbcTemplate.update("update condition_request set status = ? where request_id = ?", status, saved.getId());
+        ConditionRequest saved =
+                requestRepository.save(
+                        ConditionRequest.receive(
+                                storeId,
+                                0,
+                                "정책 원문",
+                                userId,
+                                List.of(new PolicyRule(PolicyRuleType.EQUIPMENT, "CARRIER", true)),
+                                List.of()));
+        jdbcTemplate.update(
+                "update condition_request set status = ? where request_id = ?",
+                status,
+                saved.getId());
         return saved.getId();
     }
 
@@ -111,9 +136,10 @@ class StoreManagementControllerTest {
         jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY FALSE");
         jdbcTemplate.update("update store set region_id = 11 where store_id = ?", storeId);
         jdbcTemplate.update(
-                "insert into stamp_event (event_id, title, event_year, quarter, status, starts_on, ends_on, "
-                        + "required_stamp_count, max_stamp_count) "
-                        + "values (801, '이벤트', 2026, 4, 'OPEN', '2026-10-01', '2026-12-31', 3, 5)");
+                "insert into stamp_event (event_id, title, event_year, quarter, status, starts_on,"
+                    + " ends_on, required_stamp_count, max_stamp_count) values (801, '이벤트', 2026,"
+                    + " 4, 'OPEN', '2026-10-01', '2026-12-31', 3, 5)");
+        jdbcTemplate.update("insert into event_region(event_id,region_id) values(801,11)");
         // region 행을 만들지 않으므로 이 테스트가 끝날 때까지 참조 무결성 검사를 끈다. (@AfterEach에서 복구)
     }
 
@@ -162,23 +188,27 @@ class StoreManagementControllerTest {
     void updatesAndReadsBusinessHoursInWeekOrder() throws Exception {
         Long storeId = saveManagedStore(1L);
 
-        mockMvc.perform(patch(BASE + "/stores/" + storeId + "/business-hours")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"hours": [
-                                  {"dayOfWeek": "TUESDAY", "openTime": "10:00", "closeTime": "20:00"},
-                                  {"dayOfWeek": "MONDAY", "closed": true}]}
-                                """))
+        mockMvc.perform(
+                        patch(BASE + "/stores/" + storeId + "/business-hours")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+{"hours": [
+  {"dayOfWeek": "TUESDAY", "openTime": "10:00", "closeTime": "20:00"},
+  {"dayOfWeek": "MONDAY", "closed": true}]}
+"""))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.storeId").value(storeId))
                 .andExpect(jsonPath("$.updatedDays").value(2));
 
         // 같은 요일을 다시 보내면 값만 바뀐다.
-        mockMvc.perform(patch(BASE + "/stores/" + storeId + "/business-hours")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"hours": [{"dayOfWeek": "TUESDAY", "openTime": "09:00", "closeTime": "18:30"}]}
-                                """))
+        mockMvc.perform(
+                        patch(BASE + "/stores/" + storeId + "/business-hours")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+{"hours": [{"dayOfWeek": "TUESDAY", "openTime": "09:00", "closeTime": "18:30"}]}
+"""))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get(BASE + "/stores/" + storeId + "/business-hours"))
@@ -199,20 +229,36 @@ class StoreManagementControllerTest {
         String url = BASE + "/stores/" + storeId + "/business-hours";
 
         // 종료가 시작보다 빠름
-        mockMvc.perform(patch(url).contentType(MediaType.APPLICATION_JSON).content("""
-                        {"hours": [{"dayOfWeek": "MONDAY", "openTime": "20:00", "closeTime": "10:00"}]}"""))
+        mockMvc.perform(
+                        patch(url)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+{"hours": [{"dayOfWeek": "MONDAY", "openTime": "20:00", "closeTime": "10:00"}]}"""))
                 .andExpect(status().isBadRequest());
         // 영업일인데 시각 누락
-        mockMvc.perform(patch(url).contentType(MediaType.APPLICATION_JSON).content("""
-                        {"hours": [{"dayOfWeek": "MONDAY", "openTime": "10:00"}]}"""))
+        mockMvc.perform(
+                        patch(url)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+{"hours": [{"dayOfWeek": "MONDAY", "openTime": "10:00"}]}"""))
                 .andExpect(status().isBadRequest());
         // 같은 요일 중복
-        mockMvc.perform(patch(url).contentType(MediaType.APPLICATION_JSON).content("""
-                        {"hours": [{"dayOfWeek": "MONDAY", "closed": true}, {"dayOfWeek": "MONDAY", "closed": true}]}"""))
+        mockMvc.perform(
+                        patch(url)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+{"hours": [{"dayOfWeek": "MONDAY", "closed": true}, {"dayOfWeek": "MONDAY", "closed": true}]}"""))
                 .andExpect(status().isBadRequest());
         // 빈 목록
-        mockMvc.perform(patch(url).contentType(MediaType.APPLICATION_JSON).content("""
-                        {"hours": []}"""))
+        mockMvc.perform(
+                        patch(url)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {"hours": []}"""))
                 .andExpect(status().isBadRequest());
         assertThat(hoursRepository.count()).isZero();
     }
@@ -222,7 +268,8 @@ class StoreManagementControllerTest {
     void rejectsBusinessHoursOfUnmanagedStore() throws Exception {
         Long storeId = saveManagedStore(2L);
 
-        mockMvc.perform(get(BASE + "/stores/" + storeId + "/business-hours")).andExpect(status().isForbidden());
+        mockMvc.perform(get(BASE + "/stores/" + storeId + "/business-hours"))
+                .andExpect(status().isForbidden());
     }
 
     // ---- 입장 조건 요청 목록
@@ -244,7 +291,8 @@ class StoreManagementControllerTest {
         mockMvc.perform(get(url).param("status", "APPROVED"))
                 .andExpect(jsonPath("$.items.length()").value(1))
                 .andExpect(jsonPath("$.items[0].status").value("APPROVED"));
-        mockMvc.perform(get(url).param("page", "2")).andExpect(jsonPath("$.items.length()").value(0));
+        mockMvc.perform(get(url).param("page", "2"))
+                .andExpect(jsonPath("$.items.length()").value(0));
     }
 
     @Test
@@ -266,9 +314,10 @@ class StoreManagementControllerTest {
         Long storeId = saveManagedStore(1L);
         Long requestId = saveRequest(1L, storeId, "RECEIVED");
 
-        mockMvc.perform(patch(BASE + "/condition-requests/" + requestId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"action\": \"CANCEL\"}"))
+        mockMvc.perform(
+                        patch(BASE + "/condition-requests/" + requestId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"action\": \"CANCEL\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.requestId").value(requestId))
                 .andExpect(jsonPath("$.status").value("CANCELED"));
@@ -280,9 +329,10 @@ class StoreManagementControllerTest {
         Long storeId = saveManagedStore(1L);
         Long requestId = saveRequest(1L, storeId, "APPROVED");
 
-        mockMvc.perform(patch(BASE + "/condition-requests/" + requestId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"action\": \"CANCEL\"}"))
+        mockMvc.perform(
+                        patch(BASE + "/condition-requests/" + requestId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"action\": \"CANCEL\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST_STATE"));
     }
@@ -293,26 +343,37 @@ class StoreManagementControllerTest {
         Long storeId = saveManagedStore(1L);
         Long requestId = saveRequest(1L, storeId, "NEEDS_SUPPLEMENT");
 
-        mockMvc.perform(patch(BASE + "/condition-requests/" + requestId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"action": "RESUBMIT",
-                                 "sourceText": "보완한 원문",
-                                 "evidenceUrls": ["https://example.com/more.png"]}
-                                """))
+        mockMvc.perform(
+                        patch(BASE + "/condition-requests/" + requestId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {"action": "RESUBMIT",
+                                         "sourceText": "보완한 원문",
+                                         "evidenceUrls": ["https://example.com/more.png"]}
+                                        """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("RECEIVED"));
 
-        assertThat(jdbcTemplate.queryForObject(
-                        "select source_text from condition_request where request_id = ?", String.class, requestId))
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "select source_text from condition_request where request_id = ?",
+                                String.class,
+                                requestId))
                 .isEqualTo("보완한 원문");
-        assertThat(jdbcTemplate.queryForList(
-                        "select evidence_url from condition_request_evidence where request_id = ?",
-                        String.class, requestId))
+        assertThat(
+                        jdbcTemplate.queryForList(
+                                "select evidence_url from condition_request_evidence where"
+                                        + " request_id = ?",
+                                String.class,
+                                requestId))
                 .containsExactly("https://example.com/more.png");
         // 정책 변경안을 생략했으므로 기존 규칙이 유지된다.
-        assertThat(jdbcTemplate.queryForObject(
-                        "select count(*) from condition_request_rule where request_id = ?", Long.class, requestId))
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "select count(*) from condition_request_rule where request_id = ?",
+                                Long.class,
+                                requestId))
                 .isEqualTo(1L);
     }
 
@@ -322,9 +383,10 @@ class StoreManagementControllerTest {
         Long storeId = saveManagedStore(1L);
         Long requestId = saveRequest(1L, storeId, "RECEIVED");
 
-        mockMvc.perform(patch(BASE + "/condition-requests/" + requestId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"action\": \"RESUBMIT\"}"))
+        mockMvc.perform(
+                        patch(BASE + "/condition-requests/" + requestId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"action\": \"RESUBMIT\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST_STATE"));
     }
@@ -335,9 +397,10 @@ class StoreManagementControllerTest {
         Long storeId = saveManagedStore(2L);
         Long requestId = saveRequest(2L, storeId, "RECEIVED");
 
-        mockMvc.perform(patch(BASE + "/condition-requests/" + requestId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"action\": \"CANCEL\"}"))
+        mockMvc.perform(
+                        patch(BASE + "/condition-requests/" + requestId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"action\": \"CANCEL\"}"))
                 .andExpect(status().isNotFound());
     }
 
@@ -347,13 +410,15 @@ class StoreManagementControllerTest {
         Long storeId = saveManagedStore(1L);
         Long requestId = saveRequest(1L, storeId, "RECEIVED");
 
-        mockMvc.perform(patch(BASE + "/condition-requests/" + requestId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+        mockMvc.perform(
+                        patch(BASE + "/condition-requests/" + requestId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{}"))
                 .andExpect(status().isBadRequest());
-        mockMvc.perform(patch(BASE + "/condition-requests/" + requestId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"action\": \"DELETE\"}"))
+        mockMvc.perform(
+                        patch(BASE + "/condition-requests/" + requestId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"action\": \"DELETE\"}"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -381,18 +446,20 @@ class StoreManagementControllerTest {
         mockMvc.perform(post(BASE + "/stores/" + storeId + "/qr")).andExpect(status().isCreated());
         Long firstId = qrRepository.findAll().get(0).getId();
 
-        mockMvc.perform(post(BASE + "/stores/" + storeId + "/qr")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"reason\": \"QR 코드 분실\"}"))
+        mockMvc.perform(
+                        post(BASE + "/stores/" + storeId + "/qr")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"reason\": \"QR 코드 분실\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.revokedPreviousQr").value(true));
 
-        assertThat(qrRepository.findById(firstId).orElseThrow().getStatus()).isEqualTo(QrStatus.REVOKED);
+        assertThat(qrRepository.findById(firstId).orElseThrow().getStatus())
+                .isEqualTo(QrStatus.REVOKED);
         StoreQr current = qrRepository.findFirstByStoreIdOrderByIdDesc(storeId).orElseThrow();
         assertThat(current.getStatus()).isEqualTo(QrStatus.ACTIVE);
         assertThat(current.getIssueReason()).isEqualTo("QR 코드 분실");
-        assertThat(current.getQrTokenHash()).isNotEqualTo(qrRepository.findById(firstId).orElseThrow().getQrTokenHash());
-
+        assertThat(current.getQrTokenHash())
+                .isNotEqualTo(qrRepository.findById(firstId).orElseThrow().getQrTokenHash());
     }
 
     @Test
@@ -402,9 +469,10 @@ class StoreManagementControllerTest {
         StoreQr qr = qrRepository.save(StoreQr.issue(storeId, "https://example.com/qr.png"));
         jdbcTemplate.update("update store_qr set status = 'REVOKED' where qr_id = ?", qr.getId());
 
-        mockMvc.perform(patch(BASE + "/stores/" + storeId + "/qr")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"active\": true}"))
+        mockMvc.perform(
+                        patch(BASE + "/stores/" + storeId + "/qr")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"active\": true}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST_STATE"));
     }
@@ -415,9 +483,10 @@ class StoreManagementControllerTest {
         Long storeId = saveManagedStore(1L);
         Long other = saveManagedStore(2L);
 
-        mockMvc.perform(post(BASE + "/stores/" + storeId + "/qr")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"reason\": \"" + "가".repeat(201) + "\"}"))
+        mockMvc.perform(
+                        post(BASE + "/stores/" + storeId + "/qr")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"reason\": \"" + "가".repeat(201) + "\"}"))
                 .andExpect(status().isBadRequest());
         mockMvc.perform(post(BASE + "/stores/" + other + "/qr")).andExpect(status().isForbidden());
     }
@@ -431,30 +500,47 @@ class StoreManagementControllerTest {
         mockMvc.perform(post(BASE + "/stores/" + storeId + "/qr")).andExpect(status().isCreated());
 
         StoreQr qr = qrRepository.findFirstByStoreIdOrderByIdDesc(storeId).orElseThrow();
-        assertThat(jdbcTemplate.queryForObject(
-                        "select qr_token_hash from event_store where store_id = ?", String.class, storeId))
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "select qr_token_hash from event_store where store_id = ?",
+                                String.class,
+                                storeId))
                 .isEqualTo(qr.getQrTokenHash());
-        assertThat(jdbcTemplate.queryForObject(
-                        "select qr_revoked from event_store where store_id = ?", Boolean.class, storeId))
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "select qr_revoked from event_store where store_id = ?",
+                                Boolean.class,
+                                storeId))
                 .isFalse();
 
-        mockMvc.perform(patch(BASE + "/stores/" + storeId + "/qr")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"active\": false}"))
+        mockMvc.perform(
+                        patch(BASE + "/stores/" + storeId + "/qr")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"active\": false}"))
                 .andExpect(status().isOk());
-        assertThat(jdbcTemplate.queryForObject(
-                        "select qr_revoked from event_store where store_id = ?", Boolean.class, storeId))
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "select qr_revoked from event_store where store_id = ?",
+                                Boolean.class,
+                                storeId))
                 .isTrue();
 
         // 재발급하면 같은 행의 해시가 새 QR로 바뀌고 다시 사용 가능해진다.
         mockMvc.perform(post(BASE + "/stores/" + storeId + "/qr")).andExpect(status().isCreated());
         StoreQr reissued = qrRepository.findFirstByStoreIdOrderByIdDesc(storeId).orElseThrow();
-        assertThat(jdbcTemplate.queryForObject("select count(*) from event_store", Long.class)).isEqualTo(1L);
-        assertThat(jdbcTemplate.queryForObject(
-                        "select qr_token_hash from event_store where store_id = ?", String.class, storeId))
+        assertThat(jdbcTemplate.queryForObject("select count(*) from event_store", Long.class))
+                .isEqualTo(1L);
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "select qr_token_hash from event_store where store_id = ?",
+                                String.class,
+                                storeId))
                 .isEqualTo(reissued.getQrTokenHash());
-        assertThat(jdbcTemplate.queryForObject(
-                        "select qr_revoked from event_store where store_id = ?", Boolean.class, storeId))
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "select qr_revoked from event_store where store_id = ?",
+                                Boolean.class,
+                                storeId))
                 .isFalse();
     }
 
@@ -465,6 +551,7 @@ class StoreManagementControllerTest {
 
         mockMvc.perform(post(BASE + "/stores/" + storeId + "/qr")).andExpect(status().isCreated());
 
-        assertThat(jdbcTemplate.queryForObject("select count(*) from event_store", Long.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("select count(*) from event_store", Long.class))
+                .isZero();
     }
 }

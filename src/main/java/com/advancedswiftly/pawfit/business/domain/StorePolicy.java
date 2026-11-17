@@ -1,6 +1,7 @@
 package com.advancedswiftly.pawfit.business.domain;
 
 import com.advancedswiftly.pawfit.global.common.BaseEntity;
+
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -11,6 +12,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -19,6 +21,18 @@ import java.util.List;
 @Entity
 @Table(name = "store_policy")
 public class StorePolicy extends BaseEntity {
+
+    @jakarta.persistence.Convert(converter = EntryConditionsConverter.class)
+    @Column(name = "conditions_json", length = 8000)
+    private EntryConditions conditions;
+
+    public EntryConditions getConditions() {
+        return conditions;
+    }
+
+    public void setConditions(EntryConditions conditions) {
+        this.conditions = conditions;
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -46,8 +60,7 @@ public class StorePolicy extends BaseEntity {
     @CollectionTable(name = "store_policy_rule", joinColumns = @JoinColumn(name = "policy_id"))
     private List<PolicyRule> rules = new ArrayList<>();
 
-    protected StorePolicy() {
-    }
+    protected StorePolicy() {}
 
     private StorePolicy(Long storeId, int version, String sourceText, List<PolicyRule> rules) {
         this.storeId = storeId;
@@ -56,13 +69,19 @@ public class StorePolicy extends BaseEntity {
         this.rules = new ArrayList<>(rules);
     }
 
-    public static StorePolicy create(Long storeId, int version, String sourceText, List<PolicyRule> rules) {
+    public static StorePolicy create(
+            Long storeId, int version, String sourceText, List<PolicyRule> rules) {
         return new StorePolicy(storeId, version, sourceText, rules);
     }
 
     /** 조건 변경 요청이 승인되어 만들어진 정책. */
     public static StorePolicy createFromRequest(
-            Long storeId, int version, String sourceText, List<PolicyRule> rules, String changedBy, Long requestId) {
+            Long storeId,
+            int version,
+            String sourceText,
+            List<PolicyRule> rules,
+            String changedBy,
+            Long requestId) {
         StorePolicy policy = new StorePolicy(storeId, version, sourceText, rules);
         policy.changedBy = changedBy;
         policy.requestId = requestId;

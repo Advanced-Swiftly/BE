@@ -12,15 +12,19 @@ import com.advancedswiftly.pawfit.business.api.dto.StoreQrResponse;
 import com.advancedswiftly.pawfit.business.domain.QrStatus;
 import com.advancedswiftly.pawfit.business.domain.Store;
 import com.advancedswiftly.pawfit.business.domain.StorePolicy;
+import com.advancedswiftly.pawfit.business.domain.StoreQr;
 import com.advancedswiftly.pawfit.business.domain.StoreVerification;
 import com.advancedswiftly.pawfit.business.domain.VerificationStatus;
-import com.advancedswiftly.pawfit.business.domain.StoreQr;
 import com.advancedswiftly.pawfit.business.infrastructure.StorePolicyRepository;
 import com.advancedswiftly.pawfit.business.infrastructure.StoreQrRepository;
 import com.advancedswiftly.pawfit.business.infrastructure.StoreRepository;
 import com.advancedswiftly.pawfit.business.infrastructure.StoreVerificationRepository;
 import com.advancedswiftly.pawfit.global.error.BusinessException;
 import com.advancedswiftly.pawfit.global.error.ErrorCode;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -30,9 +34,6 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /** 관리 업체의 기본 정보, 현재 입장 정책, QR을 다룬다. */
 @Service
@@ -45,6 +46,7 @@ public class StoreOperationService {
     private final StoreVerificationRepository verificationRepository;
     private final BusinessHoursService businessHoursService;
     private final EventStoreSynchronizer eventStoreSynchronizer;
+    private final QrMediaService qrMedia;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public StoreOperationService(
@@ -54,7 +56,9 @@ public class StoreOperationService {
             ManagedStoreChecker managedStoreChecker,
             StoreVerificationRepository verificationRepository,
             BusinessHoursService businessHoursService,
-            EventStoreSynchronizer eventStoreSynchronizer) {
+            EventStoreSynchronizer eventStoreSynchronizer,
+            QrMediaService qrMedia) {
+        this.qrMedia = qrMedia;
         this.verificationRepository = verificationRepository;
         this.businessHoursService = businessHoursService;
         this.eventStoreSynchronizer = eventStoreSynchronizer;
@@ -68,7 +72,10 @@ public class StoreOperationService {
     public StoreProfileUpdateResponse updateProfile(
             Long userId, Long storeId, StoreProfileUpdateRequest request) {
         managedStoreChecker.requireManagedStore(userId, storeId);
-        Store store = storeRepository.findById(storeId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        Store store =
+                storeRepository
+                        .findById(storeId)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         store.updateProfile(request.name(), request.phoneNumber(), request.description());
         if (request.amenities() != null) {
@@ -82,7 +89,7 @@ public class StoreOperationService {
     public StorePolicyResponse getCurrentPolicy(Long userId, Long storeId) {
         managedStoreChecker.requireManagedStore(userId, storeId);
         return policyRepository
-                .findFirstByStoreIdOrderByVersionDesc(storeId)
+                .findActive(storeId)
                 .map(StorePolicyResponse::from)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
@@ -90,7 +97,8 @@ public class StoreOperationService {
     @Transactional(readOnly = true)
     public StoreQrResponse getQr(Long userId, Long storeId) {
         managedStoreChecker.requireManagedStore(userId, storeId);
-        return StoreQrResponse.withImage(currentQr(storeId));
+        StoreQr qr = currentQr(storeId);
+        return new StoreQrResponse(qr.getId(), qr.getStatus(), qrMedia.url(qr.getQrImageUrl()));
     }
 
     @Transactional
@@ -115,8 +123,9 @@ public class StoreOperationService {
     @Transactional(readOnly = true)
     public ManagedStoreListResponse listManagedStores(Long userId) {
         Map<Long, Store> stores = new LinkedHashMap<>();
-        for (StoreVerification verification : verificationRepository
-                .findBySubmittedByAndStatusOrderByIdDesc(userId, VerificationStatus.APPROVED)) {
+        for (StoreVerification verification :
+                verificationRepository.findBySubmittedByAndStatusOrderByIdDesc(
+                        userId, VerificationStatus.APPROVED)) {
             Store store = verification.getStore();
             stores.putIfAbsent(store.getId(), store);
         }
@@ -127,15 +136,17 @@ public class StoreOperationService {
     @Transactional(readOnly = true)
     public StoreDetailResponse getStore(Long userId, Long storeId) {
         managedStoreChecker.requireManagedStore(userId, storeId);
-        Store store = storeRepository.findById(storeId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        Integer policyVersion = policyRepository
-                .findFirstByStoreIdOrderByVersionDesc(storeId)
-                .map(StorePolicy::getVersion)
-                .orElse(null);
-        QrStatus qrStatus = qrRepository
-                .findFirstByStoreIdOrderByIdDesc(storeId)
-                .map(StoreQr::getStatus)
-                .orElse(null);
+        Store store =
+                storeRepository
+                        .findById(storeId)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        Integer policyVersion =
+                policyRepository.findActive(storeId).map(StorePolicy::getVersion).orElse(null);
+        QrStatus qrStatus =
+                qrRepository
+                        .findFirstByStoreIdOrderByIdDesc(storeId)
+                        .map(StoreQr::getStatus)
+                        .orElse(null);
         return new StoreDetailResponse(
                 store.getId(),
                 store.getName(),
@@ -152,7 +163,10 @@ public class StoreOperationService {
     @Transactional
     public QrIssueResponse issueQr(Long userId, Long storeId, QrIssueRequest request) {
         managedStoreChecker.requireManagedStore(userId, storeId);
-        Store store = storeRepository.findById(storeId).orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        Store store =
+                storeRepository
+                        .findById(storeId)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         List<StoreQr> previous = qrRepository.findByStoreIdAndStatusNot(storeId, QrStatus.REVOKED);
         previous.forEach(StoreQr::revoke);
@@ -163,8 +177,9 @@ public class StoreOperationService {
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         String hash = sha256(token);
         String reason = request == null ? null : request.reason();
-        StoreQr qr = qrRepository.save(StoreQr.issue(
-                storeId, "https://cdn.pawfit.app/qr/" + UUID.randomUUID() + ".png", token, hash, reason));
+        StoreQr qr =
+                qrRepository.save(
+                        StoreQr.issue(storeId, qrMedia.create(token), token, hash, reason));
         eventStoreSynchronizer.syncIssued(store, hash);
         return new QrIssueResponse(qr.getId(), qr.getStatus(), !previous.isEmpty());
     }
@@ -172,8 +187,10 @@ public class StoreOperationService {
     /** 방문 인증(event 도메인)이 쓰는 해시와 같은 SHA-256 hex. */
     private static String sha256(String value) {
         try {
-            return HexFormat.of().formatHex(
-                    MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
+            return HexFormat.of()
+                    .formatHex(
+                            MessageDigest.getInstance("SHA-256")
+                                    .digest(value.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256을 사용할 수 없습니다.", exception);
         }

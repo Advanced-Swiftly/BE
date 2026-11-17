@@ -1,7 +1,7 @@
 package com.advancedswiftly.pawfit.global.ai;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 final class AiResponseParser {
 
@@ -15,7 +15,7 @@ final class AiResponseParser {
         String json = stripCodeFence(response);
         try {
             return objectMapper.readValue(json, VaccinationExtraction.class);
-        } catch (JsonProcessingException exception) {
+        } catch (JacksonException exception) {
             throw new AiClientException("AI 예방접종 분석 결과를 해석할 수 없습니다.", exception, false);
         }
     }
