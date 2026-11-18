@@ -55,12 +55,16 @@ docker build -t pawfit-api .
 | `AI_PROVIDER` | 기본 `GEMINI`, 선택 `WORKERS_AI` | AI 기능 |
 | `AI_TIMEOUT`, `AI_MAX_RETRIES` | AI timeout·재시도 | AI 기능 |
 | `GEMINI_API_KEY` | Gemini OCR·챗봇 API 키 | Gemini 선택 시 |
+| `GEMINI_CHAT_FALLBACK_MODEL` | 채팅 일시 오류 시 대체 모델(기본 `gemini-3.5-flash-lite`, 빈 값으로 끔) | Gemini 선택 시 |
 | `NTS_BUSINESS_STATUS_SERVICE_KEY` | 국세청 사업자 상태조회 Decoding 인증키 | 사업자 상태조회 |
 | `NTS_BUSINESS_STATUS_TIMEOUT` | 국세청 API timeout(기본 5초) | 사업자 상태조회 |
 | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` | Workers AI 인증 | Workers AI 선택 시 |
 
 운영 배포는 이미지·PDF 이해와 구조화 출력 품질을 위해 `GEMINI`와
 `gemini-3.8-flash`를 사용합니다. Workers AI 구현은 대체 provider로 유지합니다.
+일반 채팅은 기본 모델의 과부하·요청 제한·일시 통신 오류가 발생하면 Flash-Lite로
+한 번 전환합니다. 두 모델이 모두 실패하면 기존 제한 횟수만큼 재시도합니다.
+인증·권한·잘못된 요청 오류는 전환하지 않으며, 예방접종 분석은 기존 모델을 유지합니다.
 
 실제 비밀값은 Git이나 설정 파일에 커밋하지 않습니다.
 현재 시연 배포는 휴대전화 인증번호를 `123456`으로 고정합니다. 실제 운영으로 전환할

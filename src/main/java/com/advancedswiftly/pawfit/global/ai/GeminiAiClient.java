@@ -6,6 +6,8 @@ import com.advancedswiftly.pawfit.global.http.ExternalRestClientFactory;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -19,6 +21,7 @@ import java.util.Map;
 
 public class GeminiAiClient extends AbstractHttpAiClient {
 
+    private static final Logger log = LoggerFactory.getLogger(GeminiAiClient.class);
     private static final String API_BASE =
             "https://generativelanguage.googleapis.com/v1beta/models/";
     private final PawfitProperties.Ai properties;
@@ -26,8 +29,13 @@ public class GeminiAiClient extends AbstractHttpAiClient {
     private final AiResponseParser responseParser;
 
     public GeminiAiClient(PawfitProperties.Ai properties, ObjectMapper objectMapper) {
+        this(properties, objectMapper, ExternalRestClientFactory.create(properties.getTimeout()));
+    }
+
+    GeminiAiClient(
+            PawfitProperties.Ai properties, ObjectMapper objectMapper, RestClient restClient) {
         this.properties = properties;
-        this.restClient = ExternalRestClientFactory.create(properties.getTimeout());
+        this.restClient = restClient;
         this.responseParser = new AiResponseParser(objectMapper);
     }
 
@@ -69,12 +77,28 @@ public class GeminiAiClient extends AbstractHttpAiClient {
                     "systemInstruction",
                     Map.of("parts", List.of(Map.of("text", request.systemPrompt()))));
         }
-        return generate(body);
+        body.put("generationConfig", Map.of("responseMimeType", "application/json"));
+        String primary = properties.getGemini().getModel();
+        try {
+            return generate(body, primary);
+        } catch (AiClientException exception) {
+            String fallback = properties.getGemini().getChatFallbackModel().strip();
+            if (!exception.isRetryable() || fallback.isBlank() || fallback.equals(primary)) {
+                throw exception;
+            }
+            // Log only model identifiers; upstream exceptions can contain sensitive payloads.
+            log.warn("Gemini chat temporary failure: switching from {} to {}", primary, fallback);
+            return generate(body, fallback);
+        }
     }
 
     private String generate(Map<String, Object> body) {
+        return generate(body, properties.getGemini().getModel());
+    }
+
+    private String generate(Map<String, Object> body, String model) {
         ensureConfigured();
-        URI uri = URI.create(API_BASE + properties.getGemini().getModel() + ":generateContent");
+        URI uri = URI.create(API_BASE + model + ":generateContent");
         try {
             JsonNode response =
                     restClient

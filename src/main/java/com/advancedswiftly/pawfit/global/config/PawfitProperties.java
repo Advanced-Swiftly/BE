@@ -260,6 +260,7 @@ public class PawfitProperties {
 
         private String apiKey = "";
         private String model = "gemini-3.8-flash";
+        private String chatFallbackModel = "gemini-3.5-flash-lite";
 
         public String getApiKey() {
             return apiKey;
@@ -275,6 +276,14 @@ public class PawfitProperties {
 
         public void setModel(String model) {
             this.model = model;
+        }
+
+        public String getChatFallbackModel() {
+            return chatFallbackModel;
+        }
+
+        public void setChatFallbackModel(String chatFallbackModel) {
+            this.chatFallbackModel = chatFallbackModel == null ? "" : chatFallbackModel;
         }
     }
 
