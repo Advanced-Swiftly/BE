@@ -36,5 +36,8 @@ jobs:
       - name: Run tests and build
         run: ./gradlew clean test bootJar --no-daemon
 
+      - name: Test public data import
+        run: python3 -m unittest discover -s scripts/tests
+
       - name: Build deployment image
         run: docker build --tag pawfit-api:ci .
