@@ -106,7 +106,7 @@ SELECT * FROM jsonb_to_recordset({q(staged)}::jsonb) AS x(external_id TEXT,name 
 INSERT INTO public_facility(source_code,external_id,name,address,category,latitude,longitude,region_id,phone,visible)
 SELECT 'KTO_PET_TOUR',external_id,name,address,category,latitude,longitude,region_id,phone,TRUE FROM incoming
 ON CONFLICT(source_code,external_id) DO UPDATE SET name=EXCLUDED.name,address=EXCLUDED.address,category=EXCLUDED.category,
- latitude=EXCLUDED.latitude,longitude=EXCLUDED.longitude,region_id=EXCLUDED.region_id,phone=EXCLUDED.phone,visible=TRUE
+ latitude=EXCLUDED.latitude,longitude=EXCLUDED.longitude,region_id=EXCLUDED.region_id,phone=EXCLUDED.phone
 WHERE NOT public_facility.operator_corrected;
 INSERT INTO public_facility_image(facility_id,image_url)
 SELECT f.facility_id,i.image_url FROM incoming i JOIN public_facility f ON f.source_code='KTO_PET_TOUR' AND f.external_id=i.external_id
@@ -118,6 +118,7 @@ COMMIT;"""
     if len(matched)!=len(rows):raise RuntimeError('적재 후 원본 ID 대조 실패')
     after_by_id={r['facility_id']:r for r in query("SELECT * FROM public_facility WHERE source_code='KTO_PET_TOUR'")}
     if any(after_by_id[r['facility_id']]!=r for r in before if r['operator_corrected']):raise RuntimeError('운영자 보정 데이터 보존 검증 실패')
+    if any(after_by_id[r['facility_id']]['visible'] for r in before if not r['visible']):raise RuntimeError('기존 숨김 상태 보존 검증 실패')
     report={'regionCode':region,'apiTotalCount':data['apiTotalCount'],'accepted':len(rows),'rejected':data['rejected'],'duplicateIds':data['duplicateIds'],
             'beforeCount':len(before),'afterCount':len(imported),'newCount':len(imported)-len(before),'matchedVisible':sum(r['visible'] for r in matched),
             'preservedOperatorCorrections':sum(r['operator_corrected'] for r in before),'backupFile':str(backup),
