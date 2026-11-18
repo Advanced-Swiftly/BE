@@ -272,7 +272,7 @@ public class PlaceService {
 
     private Map<String, Policy> policies(List<String> ids) {
         if (ids.isEmpty()) return Map.of();
-        var parameters = Map.of("ids", ids);
+        var parameters = Map.of("ids", ids, "today", EntryConditions.today());
         var rules =
                 db
                         .query(
@@ -290,7 +290,7 @@ public class PlaceService {
                         .query(
                                 """
 SELECT place_id, pets_allowed, max_weight_kg, source_text, confirmed_on, details_complete, max_weight_exclusive
-FROM place_entry_policy WHERE place_id IN (:ids) AND confirmed_on <= CURRENT_DATE
+FROM place_entry_policy WHERE place_id IN (:ids) AND confirmed_on <= :today
 """,
                                 parameters,
                                 (rs, row) ->
