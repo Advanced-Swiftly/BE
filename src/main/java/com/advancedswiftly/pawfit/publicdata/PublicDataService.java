@@ -71,6 +71,7 @@ FROM public_data_source s ORDER BY s.source_id
 
     private Job claim(long sourceId, boolean fullSync) {
         String code = lockSource(sourceId);
+        if (!"KTO_PET_TOUR".equals(code)) throw invalid();
         OffsetDateTime now = Instant.now().atOffset(ZoneOffset.UTC);
         db.update(
                 """
