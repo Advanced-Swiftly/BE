@@ -61,6 +61,10 @@ class ScenarioPolicyIntegrationTest {
             if (!sql.isBlank() && !sql.contains("ENABLE ROW LEVEL SECURITY"))
                 db.execute(
                         sql.replace("ADD COLUMN region_id", "ADD COLUMN IF NOT EXISTS region_id"));
+        if (name.startsWith("V9__")) {
+            db.execute("ALTER TABLE place_entry_policy ADD COLUMN details_complete BOOLEAN NOT NULL DEFAULT TRUE");
+            db.execute("ALTER TABLE place_entry_policy ADD COLUMN max_weight_exclusive BOOLEAN NOT NULL DEFAULT FALSE");
+        }
     }
 
     @Test

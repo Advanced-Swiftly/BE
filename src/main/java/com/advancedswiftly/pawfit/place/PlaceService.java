@@ -170,7 +170,10 @@ public class PlaceService {
                                 .filter(r -> r.type().equals("EQUIPMENT"))
                                 .map(Rule::code)
                                 .toList(),
-                result.area());
+                result.area(),
+                policy != null && policy.allowed(),
+                policy != null && policy.detailsComplete(),
+                displayed != null && displayed.weightExclusive());
     }
 
     public record PolicyPreview(Verdict before, Verdict after, String example) {}
@@ -202,7 +205,7 @@ public class PlaceService {
                         "변경안",
                         EntryConditions.today(),
                         mapped,
-                        conditions);
+                        conditions, true, false);
         var example =
                 List.of(
                         new Profile(
@@ -234,6 +237,10 @@ public class PlaceService {
     private List<Card> cards(List<Place> places, List<Profile> profiles) {
         Map<String, Policy> policies = policies(places.stream().map(Place::id).toList());
         return places.stream()
+                .filter(place -> {
+                    Policy policy = policies.get(place.id());
+                    return policy != null && policy.allowed();
+                })
                 .map(
                         place ->
                                 new Card(
@@ -251,11 +258,16 @@ public class PlaceService {
         if (!id.matches("(STORE|PUBLIC):[1-9][0-9]{0,18}")) {
             throw new BusinessException(ErrorCode.PLACE_NOT_FOUND);
         }
-        return db
+        Place place = db
                 .query("SELECT * FROM place_catalog WHERE place_id=:id", Map.of("id", id), PLACE)
                 .stream()
                 .findFirst()
                 .orElseThrow(() -> new BusinessException(ErrorCode.PLACE_NOT_FOUND));
+        Policy policy = policies(List.of(id)).get(id);
+        if (policy == null || !policy.allowed()) {
+            throw new BusinessException(ErrorCode.PLACE_NOT_FOUND);
+        }
+        return place;
     }
 
     private Map<String, Policy> policies(List<String> ids) {
@@ -277,7 +289,7 @@ public class PlaceService {
                 db
                         .query(
                                 """
-SELECT place_id, pets_allowed, max_weight_kg, source_text, confirmed_on
+SELECT place_id, pets_allowed, max_weight_kg, source_text, confirmed_on, details_complete, max_weight_exclusive
 FROM place_entry_policy WHERE place_id IN (:ids) AND confirmed_on <= CURRENT_DATE
 """,
                                 parameters,
@@ -289,7 +301,7 @@ FROM place_entry_policy WHERE place_id IN (:ids) AND confirmed_on <= CURRENT_DAT
                                                 rs.getString(4),
                                                 rs.getObject(5, LocalDate.class),
                                                 rules.getOrDefault(rs.getString(1), List.of()),
-                                                null))
+                                                null, rs.getBoolean(6), rs.getBoolean(7)))
                         .stream()
                         .collect(Collectors.toMap(Policy::id, policy -> policy));
         List<Long> storeIds =
@@ -323,7 +335,7 @@ FROM place_entry_policy WHERE place_id IN (:ids) AND confirmed_on <= CURRENT_DAT
                                 id,
                                 c != null && c.petsAllowed() != null
                                         ? c.petsAllowed()
-                                        : old == null || old.allowed(),
+                                        : old != null && old.allowed(),
                                 c != null && c.indoor() != null
                                         ? c.indoor().maxWeightKg()
                                         : old == null ? null : old.maxWeight(),
@@ -334,7 +346,7 @@ FROM place_entry_policy WHERE place_id IN (:ids) AND confirmed_on <= CURRENT_DAT
                                                 .atZone(java.time.ZoneId.of("Asia/Seoul"))
                                                 .toLocalDate(),
                                 mapped,
-                                c));
+                                c, true, false));
             }
         return result;
     }
@@ -428,7 +440,7 @@ AND i.vaccinated_at <= CURRENT_DATE
                 policy.source(),
                 policy.confirmedOn(),
                 mapped,
-                null);
+                null, policy.detailsComplete(), policy.weightExclusive());
     }
 
     private Judgment evaluate(Policy policy, List<Profile> profiles) {
@@ -459,7 +471,7 @@ AND i.vaccinated_at <= CURRENT_DATE
                                 policy.source(),
                                 policy.confirmedOn(),
                                 areaRules,
-                                null);
+                                null, policy.detailsComplete(), false);
                 var results =
                         profiles.stream()
                                 .map(p -> evaluateDog(scoped, p))
@@ -513,13 +525,15 @@ AND i.vaccinated_at <= CURRENT_DATE
             return new DogResult(dog.id(), Verdict.CHECK_REQUIRED, List.of("POLICY_UNCONFIRMED"));
         if (!policy.allowed())
             return new DogResult(dog.id(), Verdict.ENTRY_DENIED, List.of("PETS_NOT_ALLOWED"));
-        Verdict verdict = Verdict.ENTRY_OK;
+        Verdict verdict = policy.detailsComplete() ? Verdict.ENTRY_OK : Verdict.CHECK_REQUIRED;
         var reasons = new ArrayList<String>();
+        if (!policy.detailsComplete()) reasons.add("POLICY_DETAILS_UNCONFIRMED");
         if (policy.maxWeight() != null) {
             if (dog.weight() == null) {
                 verdict = Verdict.CHECK_REQUIRED;
                 reasons.add("WEIGHT_UNKNOWN");
-            } else if (dog.weight().compareTo(policy.maxWeight()) > 0) {
+            } else if (dog.weight().compareTo(policy.maxWeight()) > 0
+                    || (policy.weightExclusive() && dog.weight().compareTo(policy.maxWeight()) == 0)) {
                 verdict = Verdict.ENTRY_DENIED;
                 reasons.add("WEIGHT_LIMIT_EXCEEDED");
             }
@@ -541,7 +555,7 @@ AND i.vaccinated_at <= CURRENT_DATE
     }
 
     private List<String> unrestricted(Policy policy) {
-        if (policy == null || !policy.allowed()) return List.of();
+        if (policy == null || !policy.allowed() || !policy.detailsComplete()) return List.of();
         var fields = new ArrayList<String>();
         if (policy.maxWeight() == null) fields.add("WEIGHT");
         for (String type : List.of("BREED_DENIED", "EQUIPMENT", "VACCINE")) {
@@ -600,7 +614,9 @@ AND i.vaccinated_at <= CURRENT_DATE
             String source,
             LocalDate confirmedOn,
             List<Rule> rules,
-            EntryConditions conditions) {}
+            EntryConditions conditions,
+            boolean detailsComplete,
+            boolean weightExclusive) {}
 
     public record Card(
             String placeId,
@@ -642,7 +658,10 @@ AND i.vaccinated_at <= CURRENT_DATE
             EntryConditions conditions,
             BigDecimal maxWeightKg,
             List<String> requiredEquipmentCodes,
-            String entryArea) {}
+            String entryArea,
+            boolean admissionConfirmed,
+            boolean policyDetailsComplete,
+            boolean maxWeightExclusive) {}
 
     record DogResult(long dogId, Verdict verdict, List<String> reasons) {}
 

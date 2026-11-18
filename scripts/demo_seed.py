@@ -286,7 +286,7 @@ def seed_public(api):
 
 def apply(args):
     report=inspect_db()
-    if report['version']!='22':raise RuntimeError('V22 배포와 마이그레이션 적용을 먼저 완료해 주세요.')
+    if int(report['version'])<22:raise RuntimeError('V22 이상 배포와 마이그레이션 적용을 먼저 완료해 주세요.')
     path,creds=credentials();api=API(args.api_base)
     guardian_id,guardian=register(api,path,creds,'보호자','01099000001','GUARDIAN')
     business_id,business=register(api,path,creds,'업체 담당자','01099000002','BUSINESS','owner.demo@pawfit.example')
@@ -419,6 +419,13 @@ def verify(args):
     dog_list=guardian.call('GET','/dogs')['dogs']
     if len(dog_list)!=1 or dog_list[0]['name']!='몽이':raise RuntimeError('초기 반려견 상태가 몽이 한 마리가 아닙니다. reset을 사용하세요.')
     for i,place in enumerate(PLACES):
+        if i>=4 and int(inspect_db()['version'])>=23:
+            store_id=claimed('STORE',place['name'])
+            try:guardian.call('GET',f'/places/STORE:{store_id}')
+            except RuntimeError as e:
+                if 'HTTP 404' not in str(e):raise
+            else:raise RuntimeError('동반 미확인/불가 장소가 노출됩니다.')
+            continue
         store_id=claimed('STORE',place['name']);detail=guardian.call('GET',f'/places/STORE:{store_id}?dogIds={dog_id}')
         assert detail['verdict']==EXPECTED[i][0],(place['name'],detail)
         assert detail.get('category')==place['category']
@@ -429,6 +436,7 @@ def verify(args):
         kong=guardian.call('POST','/dogs',{'name':'콩이','breedId':breed['breedId'],'birthDate':'2023-05-10','weightKg':8,'equipmentCodes':['BELLY_BAND','LEASH']})['dogId']
         try:
             for i,place in enumerate(PLACES):
+                if i>=4 and int(inspect_db()['version'])>=23:continue
                 store_id=claimed('STORE',place['name'])
                 for dog_ids,expected in [(str(kong),EXPECTED[i][1]),(f'{dog_id}&dogIds={kong}',EXPECTED[i][2])]:
                     actual=guardian.call('GET',f'/places/STORE:{store_id}?dogIds={dog_ids}')['verdict'];assert actual==expected,(place['name'],actual,expected)
