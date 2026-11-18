@@ -125,6 +125,29 @@ VALUES(100,'멍카페','서울',37.5,127,'VERIFIED',CURRENT_TIMESTAMP,CURRENT_TI
                                 .content(selection))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("DOG_NOT_OWNED"));
+
+        db.update("""
+                INSERT INTO public_facility(facility_id,name,latitude,longitude,visible,category)
+                VALUES(201,'실제 찻집',37.5,127,TRUE,'CAFE'),
+                      (202,'음식점',37.5,127,TRUE,'FOOD'),
+                      (203,'기존 음식점',37.5,127,TRUE,'RESTAURANT')
+                """);
+        for (String category : List.of("카페", "CAFE")) {
+            mvc.perform(get("/api/v1/places/map").with(guardian)
+                            .param("latitude", "37.5").param("longitude", "127")
+                            .param("category", category))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.places.length()").value(2));
+            mvc.perform(get("/api/v1/places").with(guardian).param("category", category))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(2));
+        }
+        for (String category : List.of("식당", "FOOD", "RESTAURANT")) {
+            mvc.perform(get("/api/v1/places/map").with(guardian)
+                            .param("latitude", "37.5").param("longitude", "127")
+                            .param("category", category))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.places.length()").value(2));
+            mvc.perform(get("/api/v1/places").with(guardian).param("category", category))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(2));
+        }
     }
 
     private void apply(String migration) throws Exception {

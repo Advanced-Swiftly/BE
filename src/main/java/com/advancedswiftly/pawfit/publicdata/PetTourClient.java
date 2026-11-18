@@ -121,7 +121,7 @@ class PetTourClient {
                     id,
                     limit(name, 150),
                     address.isEmpty() ? null : limit(address, 255),
-                    CATEGORIES.get(item.path("contenttypeid").asText("")),
+                    category(item),
                     latitude.setScale(7, java.math.RoundingMode.HALF_UP),
                     longitude.setScale(7, java.math.RoundingMode.HALF_UP),
                     regionId(item.path("lDongRegnCd").asText("")),
@@ -130,6 +130,16 @@ class PetTourClient {
         } catch (ArithmeticException | NumberFormatException exception) {
             return null;
         }
+    }
+
+    private static String category(JsonNode item) {
+        String type = item.path("contenttypeid").asText("");
+        String classification = item.path("lclsSystm3").asText("");
+        if ("39".equals(type)
+                && List.of("FD050100", "FD050200").contains(classification)) {
+            return "CAFE";
+        }
+        return CATEGORIES.get(type);
     }
 
     private static String safeImage(String url) {

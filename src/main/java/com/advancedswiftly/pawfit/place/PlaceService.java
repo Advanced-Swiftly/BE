@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -554,8 +555,13 @@ AND i.vaccinated_at <= CURRENT_DATE
     private void categoryFilter(
             String category, MapSqlParameterSource parameters, StringBuilder where) {
         if (category != null && !category.isBlank()) {
-            where.append(" AND UPPER(category) = UPPER(:category)");
-            parameters.addValue("category", category.strip());
+            List<String> categories = switch (category.strip().toUpperCase(Locale.ROOT)) {
+                case "카페", "CAFE" -> List.of("CAFE", "카페");
+                case "식당", "FOOD", "RESTAURANT" -> List.of("FOOD", "RESTAURANT", "식당");
+                default -> List.of(category.strip().toUpperCase(Locale.ROOT));
+            };
+            where.append(" AND UPPER(category) IN (:categories)");
+            parameters.addValue("categories", categories);
         }
     }
 
