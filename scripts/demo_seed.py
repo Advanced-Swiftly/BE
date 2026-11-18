@@ -245,7 +245,7 @@ def seed_public(api):
     collected=[]
     for page in range(1,21):
         query=urllib.parse.urlencode({'serviceKey':key,'MobileOS':'ETC','MobileApp':'PawFit','_type':'json',
-                                     'areaCode':1,'numOfRows':100,'pageNo':page,'arrange':'A'})
+                                     'lDongRegnCd':'11','numOfRows':100,'pageNo':page,'arrange':'A'})
         try:
             with urllib.request.urlopen('https://apis.data.go.kr/B551011/KorPetTourService2/areaBasedList2?'+query,timeout=30) as response:
                 response_data=json.load(response)['response']

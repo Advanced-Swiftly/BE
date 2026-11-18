@@ -33,6 +33,22 @@ DEMO 표시 일러스트입니다. 공공데이터 장소는 원본 명칭과 �
 공공데이터는 시연 좌표 37.5446, 127.0557 반경 5km에서 실제 원본 2곳을 고릅니다.
 현재 원본에는 그루브하우스와 DDP가 해당합니다. 세부 정책은 추정하지 않습니다.
 
+위 두 곳은 최초 시연 시드의 최소 샘플입니다. 서비스 지도용 서울 전체 카탈로그는
+`scripts/import_public_places.py`로 별도 수집·적재합니다. 최신 법정동 코드
+`lDongRegnCd=11`을 사용하며, 예전 `areaCode=1` 필터로 범위를 축소하지 않습니다.
+
+```sh
+python3 scripts/import_public_places.py collect --region-code 11
+python3 scripts/import_public_places.py apply --env-file /private/tmp/pawfit-public-db.env --publish
+```
+
+수집 결과는 `.demo/seoul-public-places.json`에 원본과 함께 보관합니다. 원본 ID·좌표·지역을
+검사한 자료만 노출하며 입장 정책은 생성하지 않습니다. 기존 운영자 보정/숨김 데이터는
+덮어쓰지 않습니다. 입력 전 백업과 생성 ID·건수 보고서를 `.demo/`에 남깁니다.
+서울 부분 적재를 전국 동기화 완료로 기록하지 않으며, 기존 시연 계정·업체·정책은 유지합니다.
+관광공사 세부 분류의 카페/찻집은 `CAFE`로 정규화합니다. 지도·검색 API는 iOS의
+`카페`/`식당` 표기와 `CAFE`/`FOOD`/`RESTAURANT` 표기를 함께 지원합니다.
+
 ## 실행
 
 Python 3, `psql`, 배포된 V22와 정상적인 API·Storage 설정이 필요합니다.
