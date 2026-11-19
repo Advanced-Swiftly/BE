@@ -146,9 +146,52 @@ WHERE session_id=? AND message_id < ? ORDER BY message_id DESC LIMIT ?
                                 userMessageId,
                                 new Assistant(assistantId, content, List.of(), proposal));
                     });
-        var candidates =
-                places.chatCandidates(
-                        auth, request.selectedDogIds(), request.latitude(), request.longitude());
+        var named = places.namedChatPlaces(auth, request.selectedDogIds(), request.content());
+        Answer answer =
+                named.size() == 1 && ChatPolicyAnswer.supports(request.content())
+                        ? new Answer(
+                                ChatPolicyAnswer.render(named.getFirst()),
+                                List.of(
+                                        new PlaceRef(
+                                                named.getFirst().card().placeId(),
+                                                named.getFirst().card().verdict().name())))
+                        : generateAnswer(auth, sessionId, request, named);
+        return transaction.execute(
+                ignored -> {
+                    if (db.update(
+                                    """
+                                    UPDATE chat_session SET revision=revision+1,last_message_at=?
+                                    WHERE session_id=? AND user_id=? AND revision=?
+                                    """,
+                                    OffsetDateTime.now(ZoneOffset.UTC),
+                                    sessionId,
+                                    userId,
+                                    revision)
+                            == 0) {
+                        requireSession(userId, sessionId);
+                        throw new BusinessException(ErrorCode.CHAT_SESSION_CHANGED);
+                    }
+                    long userMessageId =
+                            saveMessage(sessionId, "USER", request.content().strip(), List.of());
+                    long assistantId =
+                            saveMessage(sessionId, "ASSISTANT", answer.content(), answer.places());
+                    return new Sent(
+                            userMessageId,
+                            new Assistant(assistantId, answer.content(), answer.places(), null));
+                });
+    }
+
+    private Answer generateAnswer(
+            Authentication auth,
+            long sessionId,
+            ChatController.Send request,
+            List<PlaceService.ChatPlace> named) {
+        var byId = new LinkedHashMap<String, PlaceService.Card>();
+        named.forEach(p -> byId.put(p.card().placeId(), p.card()));
+        places.chatCandidates(
+                        auth, request.selectedDogIds(), request.latitude(), request.longitude())
+                .forEach(p -> byId.putIfAbsent(p.placeId(), p));
+        var candidates = List.copyOf(byId.values());
         var previous =
                 db.query(
                         """
@@ -188,30 +231,10 @@ WHERE session_id=? AND message_id < ? ORDER BY message_id DESC LIMIT ?
                                         .toList());
 
         // 외부 응답을 기다리는 동안 DB 트랜잭션이나 세션 잠금을 점유하지 않습니다.
-        Answer answer = answer(new AiChatRequest(prompt, context), candidates);
-        return transaction.execute(
-                ignored -> {
-                    if (db.update(
-                                    """
-                                    UPDATE chat_session SET revision=revision+1,last_message_at=?
-                                    WHERE session_id=? AND user_id=? AND revision=?
-                                    """,
-                                    OffsetDateTime.now(ZoneOffset.UTC),
-                                    sessionId,
-                                    userId,
-                                    revision)
-                            == 0) {
-                        requireSession(userId, sessionId);
-                        throw new BusinessException(ErrorCode.CHAT_SESSION_CHANGED);
-                    }
-                    long userMessageId =
-                            saveMessage(sessionId, "USER", request.content().strip(), List.of());
-                    long assistantId =
-                            saveMessage(sessionId, "ASSISTANT", answer.content(), answer.places());
-                    return new Sent(
-                            userMessageId,
-                            new Assistant(assistantId, answer.content(), answer.places(), null));
-                });
+        return answer(
+                new AiChatRequest(
+                        prompt + "\n명시한 장소의 최신 정책: " + json.writeValueAsString(named), context),
+                candidates);
     }
 
     private Answer answer(AiChatRequest request, List<PlaceService.Card> candidates) {

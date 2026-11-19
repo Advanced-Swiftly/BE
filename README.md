@@ -106,3 +106,5 @@ PR에서는 CI의 `Test and build` 검사를 반드시 통과해야 합니다.
 [배포 장소 결과·실제 조사 41곳·재입력 검증](docs/PLACE_DATA_RELEASE.md)과
 [동반 확인 근거 입력](docs/confirmed-admission-import.md)은 현재 지도 노출 기준을 설명합니다.
 `python3 scripts/demo_seed.py plan`은 DB에 연결하지 않고 입력 계획을 보여 줍니다.
+
+- [댕댕 도우미의 빠른 장소 정책 답변](docs/CHAT_POLICY_ANSWERS.md)
