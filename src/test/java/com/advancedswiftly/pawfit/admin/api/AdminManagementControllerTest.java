@@ -378,7 +378,8 @@ class AdminManagementControllerTest {
                 .andExpect(jsonPath("$.items.length()").value(1))
                 .andExpect(jsonPath("$.items[0].dogName").value("콩이"));
         mockMvc.perform(get(BASE + "/vaccination-records").param("status", "VERIFIED"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].dogName").value("보리"));
 
         mockMvc.perform(patch(BASE + "/vaccination-records/20").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"action\":\"NEEDS_MORE\"}"))

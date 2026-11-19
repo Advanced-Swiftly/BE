@@ -58,6 +58,9 @@ class AdminControllerTest {
 
     private MockMvc mockMvc;
 
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.advancedswiftly.pawfit.global.storage.TransactionalStorageService storage;
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
@@ -638,6 +641,9 @@ class AdminControllerTest {
     @Test
     @WithMockUser(username = "9", roles = "OPERATOR")
     void showsVaccinationReview() throws Exception {
+        org.mockito.Mockito.when(storage.createSignedReadUrl(org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(java.net.URI.create("https://storage.example/signed/cert.jpg?token=short-lived"));
+        jdbcTemplate.update("insert into dog(dog_id,user_id,breed_id,name,is_default,vaccination_status,created_at,updated_at) values(5,1,1,'콩이',false,'PENDING',now(),now())");
         jdbcTemplate.update("insert into vaccination_record (record_id, dog_id, status) values (20, 5, 'PENDING_REVIEW')");
         jdbcTemplate.update("insert into vaccination_document (document_id, record_id, object_path) values (31, 20, 'docs/31.jpg')");
         jdbcTemplate.update(
@@ -653,6 +659,10 @@ class AdminControllerTest {
                 .andExpect(jsonPath("$.dogId").value(5))
                 .andExpect(jsonPath("$.status").value("PENDING_REVIEW"))
                 .andExpect(jsonPath("$.documents[0].documentId").value(31))
+                .andExpect(jsonPath("$.documents[0].url").value("https://storage.example/signed/cert.jpg?token=short-lived"))
+                .andExpect(jsonPath("$.documents[0].contentType").value("image/jpeg"))
+                .andExpect(jsonPath("$.documents[0].urlExpiresAt").isNotEmpty())
+                .andExpect(jsonPath("$.dog.name").value("콩이"))
                 .andExpect(jsonPath("$.items.length()").value(2))
                 .andExpect(jsonPath("$.items[0].source").value("AI"))
                 .andExpect(jsonPath("$.items[0].vaccineCode").value("RABIES"))
@@ -660,4 +670,28 @@ class AdminControllerTest {
                 .andExpect(jsonPath("$.items[1].confidence").doesNotExist());
         mockMvc.perform(get(BASE + "/vaccination-records/999")).andExpect(status().isNotFound());
     }
+    @Test
+    @WithMockUser(username = "9", roles = "OPERATOR")
+    void preservesPdfMetadataWhenSigningFailsAndCanRetry() throws Exception {
+        jdbcTemplate.update("insert into vaccination_record(record_id,dog_id,status) values(30,5,'OPERATOR_REVIEW')");
+        jdbcTemplate.update("insert into vaccination_document(document_id,record_id,object_path) values(40,30,'vaccinations/1/cert.pdf')");
+        org.mockito.Mockito.when(storage.createSignedReadUrl("vaccinations/1/cert.pdf"))
+                .thenThrow(new com.advancedswiftly.pawfit.global.storage.StorageException("temporary outage"))
+                .thenReturn(java.net.URI.create("https://storage.example/signed/cert.pdf?token=new"));
+        mockMvc.perform(get(BASE + "/vaccination-records/30")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents[0].contentType").value("application/pdf"))
+                .andExpect(jsonPath("$.documents[0].readError").isNotEmpty())
+                .andExpect(jsonPath("$.documents[0].url").doesNotExist());
+        mockMvc.perform(get(BASE + "/vaccination-records/30")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents[0].url").value("https://storage.example/signed/cert.pdf?token=new"))
+                .andExpect(jsonPath("$.documents[0].readError").doesNotExist());
+    }
+
+    @Test
+    @WithMockUser(username = "1", roles = "GUARDIAN")
+    void guardianCannotObtainAdminDocumentUrl() throws Exception {
+        mockMvc.perform(get(BASE + "/vaccination-records/20")).andExpect(status().isForbidden());
+        org.mockito.Mockito.verifyNoInteractions(storage);
+    }
+
 }
