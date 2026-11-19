@@ -36,7 +36,7 @@ public class AdminVaccinationService {
 
     @Transactional(readOnly = true)
     public VaccinationReviewListResponse list(String status, int page) {
-        if (status != null && !REVIEWABLE.contains(status)) {
+        if (status != null && !Set.of("ANALYZED", "NEEDS_MANUAL_REVIEW", "OPERATOR_REVIEW", "VERIFIED", "REJECTED").contains(status)) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "status 값이 올바르지 않습니다.");
         }
         StringBuilder sql = new StringBuilder(

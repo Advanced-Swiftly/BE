@@ -89,7 +89,7 @@ public class AdminReviewListController {
     public VaccinationReviewListResponse listVaccinationRecords(
             @Parameter(
                     description = "검토 상태",
-                    schema = @Schema(type = "string", allowableValues = {"ANALYZED", "NEEDS_MANUAL_REVIEW", "OPERATOR_REVIEW"}))
+                    schema = @Schema(type = "string", allowableValues = {"ANALYZED", "NEEDS_MANUAL_REVIEW", "OPERATOR_REVIEW", "VERIFIED", "REJECTED"}))
             @RequestParam(required = false) String status,
             @Parameter(description = "페이지 번호 (1부터)", example = "1") @RequestParam(required = false) String page) {
         return vaccinationService.list(
