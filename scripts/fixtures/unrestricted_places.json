@@ -1,0 +1,79 @@
+{
+  "seedKey": "pawfit-unrestricted-notion-20261119",
+  "sourceUrl": "https://app.notion.com/p/41d93859461280fbb471e2d747a31a75",
+  "coordinateType": "FICTIONAL_SEONGSU_DEMO",
+  "places": [
+    {
+      "sourceId": "41d93859-4612-80cf-a599-d07d17ab0a4d",
+      "name": "24시카페",
+      "category": "CAFE",
+      "originalCondition": "없음",
+      "latitude": 37.5471,
+      "longitude": 127.054
+    },
+    {
+      "sourceId": "41d93859-4612-80c4-bc10-da23a486d0c2",
+      "name": "24시한성감자탕",
+      "category": "FOOD",
+      "originalCondition": "없음",
+      "latitude": 37.5467,
+      "longitude": 127.0568
+    },
+    {
+      "sourceId": "41d93859-4612-80a7-a256-d2b317d69974",
+      "name": "분위기좋은카페",
+      "category": "CAFE",
+      "originalCondition": "없음",
+      "latitude": 37.5459,
+      "longitude": 127.0587
+    },
+    {
+      "sourceId": "41d93859-4612-806c-84da-d24a4a8a6f16",
+      "name": "얼큰해장국",
+      "category": "FOOD",
+      "originalCondition": "없음",
+      "latitude": 37.5446,
+      "longitude": 127.0592
+    },
+    {
+      "sourceId": "41d93859-4612-80d3-bd10-e13b8edfebc3",
+      "name": "엄마손맛김치찌개",
+      "category": "FOOD",
+      "originalCondition": "없음",
+      "latitude": 37.5432,
+      "longitude": 127.0578
+    },
+    {
+      "sourceId": "41d93859-4612-80bc-aa13-e09337a72ad2",
+      "name": "초코베이커리",
+      "category": "CAFE",
+      "originalCondition": "없음",
+      "latitude": 37.5423,
+      "longitude": 127.0555
+    },
+    {
+      "sourceId": "41d93859-4612-8009-9785-c138917d667f",
+      "name": "최고식당",
+      "category": "FOOD",
+      "originalCondition": "없음",
+      "latitude": 37.543,
+      "longitude": 127.0526
+    },
+    {
+      "sourceId": "41d93859-4612-8095-9f33-dfcd72759a43",
+      "name": "카페인만땅",
+      "category": "CAFE",
+      "originalCondition": "없음",
+      "latitude": 37.5443,
+      "longitude": 127.0514
+    },
+    {
+      "sourceId": "41d93859-4612-80a9-9b37-f566a827cbb9",
+      "name": "커피가 맛있는 집",
+      "category": "CAFE",
+      "originalCondition": "없음",
+      "latitude": 37.546,
+      "longitude": 127.0518
+    }
+  ]
+}
