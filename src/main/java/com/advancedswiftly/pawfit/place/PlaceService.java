@@ -234,6 +234,91 @@ public class PlaceService {
                         .toList();
     }
 
+    /** Explicit place mentions are resolved before the nearby recommendation limit. */
+    public List<ChatPlace> namedChatPlaces(
+            Authentication auth, List<Long> dogIds, String question) {
+        String normalized = question.toLowerCase(Locale.ROOT).replaceAll("\\s+", "");
+        var mentioned =
+                db.query(
+                        "SELECT * FROM place_catalog WHERE LENGTH(REPLACE(name,' ','')) >= 2"
+                                + " AND POSITION(REPLACE(LOWER(name),' ','') IN :question) > 0"
+                                + " ORDER BY LENGTH(name) DESC, place_id LIMIT 20",
+                        Map.of("question", normalized),
+                        PLACE);
+        if (mentioned.isEmpty()) return List.of();
+        // Validate every supplied ID even when a dog is also explicitly named in the question.
+        var requestedProfiles = profiles(auth, dogIds);
+        var owned = dogs.findAllByUserIdOrderByDefaultDogDescIdAsc(Long.parseLong(auth.getName()));
+        String withoutPlaces = normalized;
+        for (Place place : mentioned)
+            withoutPlaces =
+                    withoutPlaces.replace(
+                            place.name().toLowerCase(Locale.ROOT).replaceAll("\\s+", ""), "");
+        final String dogQuestion = withoutPlaces;
+        var namedDogs =
+                owned.stream()
+                        .filter(
+                                d ->
+                                        dogQuestion.contains(
+                                                d.getName()
+                                                        .toLowerCase(Locale.ROOT)
+                                                        .replaceAll("\\s+", "")))
+                        .toList();
+        List<Long> selected =
+                namedDogs.isEmpty() ? dogIds : namedDogs.stream().map(d -> d.getId()).toList();
+        var selectedProfiles = namedDogs.isEmpty() ? requestedProfiles : profiles(auth, selected);
+        var names =
+                owned.stream()
+                        .filter(d -> selectedProfiles.stream().anyMatch(p -> p.id() == d.getId()))
+                        .map(d -> d.getName())
+                        .toList();
+        var policies = policies(mentioned.stream().map(Place::id).toList());
+        return mentioned.stream()
+                .filter(p -> policies.containsKey(p.id()) && policies.get(p.id()).allowed())
+                .map(
+                        p -> {
+                            Policy policy = policies.get(p.id());
+                            Judgment judgment = evaluate(policy, selectedProfiles);
+                            Policy scoped = scope(policy, judgment.area());
+                            return new ChatPlace(
+                                    new Card(
+                                            p.id(),
+                                            p.name(),
+                                            p.latitude(),
+                                            p.longitude(),
+                                            judgment.overallVerdict(),
+                                            p.category()),
+                                    names,
+                                    judgment.dogs().stream()
+                                            .flatMap(d -> d.reasons().stream())
+                                            .distinct()
+                                            .toList(),
+                                    scoped.maxWeight(),
+                                    scoped.weightExclusive(),
+                                    scoped.rules().stream()
+                                            .filter(r -> r.type().equals("EQUIPMENT"))
+                                            .map(Rule::code)
+                                            .toList(),
+                                    judgment.area(),
+                                    policy.detailsComplete(),
+                                    policy.confirmedOn(),
+                                    policy.conditions());
+                        })
+                .toList();
+    }
+
+    public record ChatPlace(
+            Card card,
+            List<String> dogNames,
+            List<String> reasons,
+            BigDecimal maxWeightKg,
+            boolean maxWeightExclusive,
+            List<String> requiredEquipmentCodes,
+            String area,
+            boolean detailsComplete,
+            LocalDate confirmedOn,
+            EntryConditions conditions) {}
+
     private List<Card> cards(List<Place> places, List<Profile> profiles) {
         Map<String, Policy> policies = policies(places.stream().map(Place::id).toList());
         return places.stream()
