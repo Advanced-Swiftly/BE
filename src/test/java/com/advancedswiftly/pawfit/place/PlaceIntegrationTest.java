@@ -177,6 +177,20 @@ VALUES(100,'멍카페','서울',37.5,127,'VERIFIED',CURRENT_TIMESTAMP,CURRENT_TI
         db.update("UPDATE place_entry_policy SET max_weight_kg=7 WHERE place_id='PUBLIC:200'");
         mvc.perform(get("/api/v1/places/PUBLIC:200").with(guardian).param("dogIds", small.getId().toString()))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.verdict").value("CHECK_REQUIRED"));
+
+        // Explicitly unrestricted policies allow both dogs despite different weights/preparations.
+        db.update("UPDATE place_entry_policy SET max_weight_kg=NULL,max_weight_exclusive=FALSE,details_complete=TRUE WHERE place_id='PUBLIC:200'");
+        mvc.perform(post("/api/v1/places/PUBLIC:200/entry-judgments").with(guardian)
+                        .contentType("application/json").content(selection))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.overallVerdict").value("ENTRY_OK"))
+                .andExpect(jsonPath("$.dogs[0].verdict").value("ENTRY_OK"))
+                .andExpect(jsonPath("$.dogs[1].verdict").value("ENTRY_OK"));
+        mvc.perform(get("/api/v1/places/PUBLIC:200").with(guardian)
+                        .param("dogIds", small.getId().toString(), large.getId().toString()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.verdict").value("ENTRY_OK"))
+                .andExpect(jsonPath("$.policyDetailsComplete").value(true))
+                .andExpect(jsonPath("$.unrestrictedFields.length()").value(4));
     }
 
     private void apply(String migration) throws Exception {
